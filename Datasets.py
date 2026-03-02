@@ -8,7 +8,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader 
 import torchvision.transforms as T # Torch library for image Transformation
 
-from config import (
+from Config import (
     FER_DIR,RAFDB_DIR,IMG_SIZE,BATCH_SIZE,NUM_WORKERS,PIN_MEMORY,NORMALIZE_MEAN,NORMALIZE_STD,AUGMENT_TRAIN,HORIZONTAL_FLIP,RANDOM_ROTATION,COLOR_JITTER,RANDOM_ERASING,UNIFIED_CLASSES,SEED
 ) # Imported all the necessary parameters from config.py
 
