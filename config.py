@@ -53,10 +53,10 @@ SEED         = 42     # For reproducibility — same results every run
 # Phase 1 → freeze the backbone, only train the new head (fast, safe)
 # Phase 2 → unfreeze last N layers, fine-tune with low LR (boosts accuracy)
 
-PHASE1_EPOCHS   = 10
+PHASE1_EPOCHS   = 1
 PHASE1_LR       = 1e-3    # Higher LR ok since only head is training
 
-PHASE2_EPOCHS   = 40
+PHASE2_EPOCHS   = 1
 PHASE2_LR       = 1e-4    # Must be low — we're touching pretrained weights
 PHASE2_UNFREEZE = 30      # How many layers to unfreeze from the end
 
@@ -106,7 +106,7 @@ SHAP_TEST_SAMPLES       = 10
 # SECTION 8 — HARDWARE SETTINGS
 # ----------------------------------------------------------------
 
-USE_AMP    = True   # Automatic Mixed Precision — uses float16
+USE_AMP    = False   # Automatic Mixed Precision — uses float16
                     # Cuts VRAM usage by ~40% on RTX 3050. Always keep True.
 NUM_WORKERS = 4     # Parallel data loading threads
 PIN_MEMORY  = True  # Faster CPU→GPU data transfer
