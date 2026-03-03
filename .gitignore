@@ -1,4 +1,19 @@
-"outputs/checkpoints/*.pth" 
-"outputs/checkpoints/*.json" 
-"outputs/checkpoints/*.pth" 
-"outputs/checkpoints/*.json" 
+# Dataset — too large + Kaggle license
+data/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+
+# Rough/test files
+rough.py
+
+# NOTE — outputs/checkpoints are NOT ignored
+# They are tracked via Git LFS instead
