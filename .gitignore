@@ -1,2 +1,4 @@
 "outputs/checkpoints/*.pth" 
 "outputs/checkpoints/*.json" 
+"outputs/checkpoints/*.pth" 
+"outputs/checkpoints/*.json" 
