@@ -45,7 +45,7 @@ def build_resnet50(pretrained : bool = True) -> FERModel:
     )
     feature_dim = backbone.fc.in_features
     backbone.fc = nn.Identity() # remove the final classification layer
-    model = FERModel(backbone, feature_dim, "ResNet-50",dropout = 0.6)
+    model = FERModel(backbone, feature_dim, "ResNet-50",dropout = 0.5)
     print(f"ResNet-50 ready | Feature dim: {feature_dim} | Classes: {NUM_CLASSES}")
     return model
     
