@@ -53,10 +53,10 @@ SEED         = 42     # For reproducibility — same results every run
 # Phase 1 → freeze the backbone, only train the new head (fast, safe)
 # Phase 2 → unfreeze last N layers, fine-tune with low LR (boosts accuracy)
 
-PHASE1_EPOCHS   = 1
+PHASE1_EPOCHS   = 10
 PHASE1_LR       = 1e-3    # Higher LR ok since only head is training
 
-PHASE2_EPOCHS   = 1
+PHASE2_EPOCHS   = 40
 PHASE2_LR       = 1e-4    # Must be low — we're touching pretrained weights
 PHASE2_UNFREEZE = 30      # How many layers to unfreeze from the end
 
