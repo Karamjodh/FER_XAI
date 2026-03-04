@@ -57,11 +57,11 @@ PHASE1_EPOCHS   = 10
 PHASE1_LR       = 1e-3    # Higher LR ok since only head is training
 
 PHASE2_EPOCHS   = 40
-PHASE2_LR       = 1e-4    # Must be low — we're touching pretrained weights
-PHASE2_UNFREEZE = 30      # How many layers to unfreeze from the end
+PHASE2_LR       = 5e-5    # Must be low — we're touching pretrained weights
+PHASE2_UNFREEZE = 20     # How many layers to unfreeze from the end
 
 WEIGHT_DECAY         = 1e-4   # L2 regularization — prevents overfitting
-EARLY_STOP_PATIENCE  = 8      # Stop if val_loss doesn't improve for 8 epochs
+EARLY_STOP_PATIENCE  = 15      # Stop if val_loss doesn't improve for 8 epochs
 
 # ----------------------------------------------------------------
 # SECTION 5 — AUGMENTATION SETTINGS
@@ -71,7 +71,7 @@ EARLY_STOP_PATIENCE  = 8      # Stop if val_loss doesn't improve for 8 epochs
 
 AUGMENT_TRAIN    = True
 HORIZONTAL_FLIP  = True
-RANDOM_ROTATION  = 15       # Rotate images up to ±15 degrees
+RANDOM_ROTATION  = 20      # Rotate images up to ±15 degrees
 COLOR_JITTER     = True     # Slight brightness/contrast changes
 RANDOM_ERASING   = True     # Randomly erase small patches (helps with occlusion)
 
