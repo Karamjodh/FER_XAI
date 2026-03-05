@@ -124,11 +124,16 @@ LOG_INTERVAL = 10   # Print progress every 10 batches
 # python config.py
 # ----------------------------------------------------------------
 
-OPTIMIZER  = "adam"      # options: "adam", "adamw"
-SCHEDULER  = "cosine"    # options: "cosine", "step"
+OPTIMIZER  = "adamw"      # options: "adam", "adamw"
+SCHEDULER1  = "cosine"    # options: "cosine", "step"
 LR_STEP_SIZE = 10        # used if SCHEDULER = "step"
 LR_GAMMA     = 0.5       # LR multiplier per step
 LR_MIN       = 1e-6      # minimum LR for cosine scheduler
+SCHEDULER2    = "cyclic"
+CYCLIC_BASE_LR  = 1e-5   # minimum LR
+CYCLIC_MAX_LR   = 1e-3   # maximum LR  
+CYCLIC_STEP     = 10     # epochs per half cycle
+ACTIVE_SCHEDULER = "cyclic"    # Which one to use (change this to switch)
 
 if __name__ == "__main__":
     print("BASE_DIR :", BASE_DIR)

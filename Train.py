@@ -10,7 +10,7 @@ import torch.nn as nn
 from torch.cuda.amp import GradScaler
 
 from Config import (
-PHASE1_EPOCHS,PHASE1_LR,PHASE2_EPOCHS,PHASE2_LR,PHASE2_UNFREEZE,OPTIMIZER,WEIGHT_DECAY,SCHEDULER,LR_STEP_SIZE,LR_GAMMA,LR_MIN,USE_WEIGHTED_LOSS,USE_AMP,LOG_INTERVAL,CKPT_DIR,SEED,EARLY_STOP_PATIENCE,MODELS_TO_TRAIN
+PHASE1_EPOCHS,PHASE1_LR,PHASE2_EPOCHS,PHASE2_LR,PHASE2_UNFREEZE,OPTIMIZER,WEIGHT_DECAY,SCHEDULER1,LR_STEP_SIZE,LR_GAMMA,LR_MIN,SCHEDULER2,CYCLIC_BASE_LR,CYCLIC_MAX_LR,CYCLIC_STEP,ACTIVE_SCHEDULER,USE_WEIGHTED_LOSS,USE_AMP,LOG_INTERVAL,CKPT_DIR,SEED,EARLY_STOP_PATIENCE,MODELS_TO_TRAIN
 )
 from Datasets import get_dataloaders
 from Models import get_model, save_checkpoint
@@ -50,9 +50,11 @@ def build_optimizer(model, lr:float):
     raise ValueError(f"Unsupported optimizer: {OPTIMIZER}")
 
 def build_scheduler(optimizer, phase_epochs : int):
-    if SCHEDULER == "cosine":
+    if ACTIVE_SCHEDULER == "cosine":
         return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max = phase_epochs, eta_min = LR_MIN)
-    elif SCHEDULER == "step":
+    elif ACTIVE_SCHEDULER == "cyclic":
+        return torch.optim.lr_scheduler.CyclicLR(optimizer,base_lr = CYCLIC_BASE_LR, max_lr = CYCLIC_MAX_LR, step_size_up = CYCLIC_STEP, mode = "triangular2", cycle_momentum = False)
+    elif ACTIVE_SCHEDULER == "step":
         return torch.optim.lr_scheduler.StepLR(optimizer,step_size = LR_STEP_SIZE,gamma = LR_GAMMA)
     return None
 
@@ -89,9 +91,9 @@ def run_epoch(model, loader, criterion, optimizer, scaler, device, phase : str =
             total_loss += loss.item() * labels.size(0)
             if is_train and (batch_idx + 1) % LOG_INTERVAL == 0:
                 running_acc = correct/total
-                print(f"Batch[{batch_idx+1:4d}/{len(loader)}]"
-                      f'Loss : {loss.item():.4f} |'
-                      f'Acc : {running_acc:.4f}')
+                print(f"Batch[{batch_idx+1:4d}/{len(loader)} ]"
+                      f' Loss : {loss.item():.4f} |'
+                      f' Acc : {running_acc:.4f}')
     avg_loss = total_loss / total
     accuracy = correct / total
     return avg_loss, accuracy
