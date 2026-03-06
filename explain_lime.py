@@ -74,7 +74,12 @@ def load_test_samples(dataset_name : str, num_samples: int = 20):
 def generate_lime_explanation(image : Image.Image, predict_fn, num_samples : int = NUM_SAMPLES):
     explainer = lime_image.LimeImageExplainer()
     img_array = np.array(image)
-    segmenter = SegmentationAlgorithm('quickshift', kernel_size = 4, max_dist = 200, ratio = 0.2)
+    segmenter = SegmentationAlgorithm(
+    "quickshift",
+    kernel_size = 2,    # smaller = more detailed segments
+    max_dist    = 50,   # smaller = tighter segments
+    ratio       = 0.1   # lower = more color-based grouping
+    )
     explanation = explainer.explain_instance(
         img_array, predict_fn, top_labels = NUM_CLASSES,hide_color = 0, num_samples = num_samples, segmentation_fn = segmenter
     )
