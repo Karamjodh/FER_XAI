@@ -1,0 +1,26 @@
+[
+  {
+    "idx": 0,
+    "true": "Angry",
+    "pred": "Sad",
+    "confidence": 0.5442245602607727,
+    "correct": false,
+    "saved": "outputs\\explanations\\lime\\resnet50_fer2013\\000_Angry_predSad.png"
+  },
+  {
+    "idx": 1,
+    "true": "Neutral",
+    "pred": "Sad",
+    "confidence": 0.8029413819313049,
+    "correct": false,
+    "saved": "outputs\\explanations\\lime\\resnet50_fer2013\\001_Neutral_predSad.png"
+  },
+  {
+    "idx": 2,
+    "true": "Sad",
+    "pred": "Surprise",
+    "confidence": 0.9850409626960754,
+    "correct": false,
+    "saved": "outputs\\explanations\\lime\\resnet50_fer2013\\002_Sad_predSurprise.png"
+  }
+]
