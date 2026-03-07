@@ -31,3 +31,5 @@ tqdm>=4.66.0
 
 # ── Dataset Download (optional) ──
 kaggle>=1.6.0
+
+shap
