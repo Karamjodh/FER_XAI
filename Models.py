@@ -55,7 +55,7 @@ def build_efficientnet_b0(pretrained : bool = True) -> FERModel:
     )
     feature_dim = backbone.classifier[1].in_features
     backbone.classifier = nn.Identity() # remove the final classification layer
-    model = FERModel(backbone, feature_dim, "EfficientNet-B0", dropout = 0.4)
+    model = FERModel(backbone, feature_dim, "EfficientNet-B0", dropout = 0.3)
     print(f" EfficientNet-B0 ready | Feature dim: {feature_dim} | Classes: {NUM_CLASSES}")
     return model
     
@@ -66,7 +66,7 @@ def build_vgg16(pretrained : bool = True) -> FERModel:
     backbone.classifier = nn.Sequential(
         nn.Linear(25088,4096),
         nn.ReLU(inplace = True),
-        nn.Dropout(0.5),
+        nn.Dropout(0.3),
         nn.Linear(4096,1024),
         nn.ReLU(inplace = True),
     )
