@@ -193,7 +193,7 @@ def train_model(model_name : str, dataset_name: str = "fer2013"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model",type = str, default = "resnet50", choices = ["resnet50","efficientnet_b0","vgg16"])
+    parser.add_argument("--model",type = str, default = "resnet50", choices = ["resnet50","efficientnet_b0"])
     parser.add_argument("--dataset",type = str, default = "fer2013", choices = ["fer2013","rafdb","combined"])
     parser.add_argument("--all",action = "store_true", help = "Train all 3 models sequentially")
     args = parser.parse_args()

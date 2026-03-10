@@ -59,25 +59,9 @@ def build_efficientnet_b0(pretrained : bool = True) -> FERModel:
     print(f" EfficientNet-B0 ready | Feature dim: {feature_dim} | Classes: {NUM_CLASSES}")
     return model
     
-def build_vgg16(pretrained : bool = True) -> FERModel:
-    backbone = models.vgg16(
-        weights = models.VGG16_Weights.IMAGENET1K_V1 if pretrained else None
-    )
-    backbone.classifier = nn.Sequential(
-        nn.Linear(25088,4096),
-        nn.ReLU(inplace = True),
-        nn.Dropout(0.3),
-        nn.Linear(4096,1024),
-        nn.ReLU(inplace = True),
-    )
-    model = FERModel(backbone, 1024, "VGG-16", dropout = 0.5)
-    print(f" VGG-16 ready | Feature dim: 1024 | Classes: {NUM_CLASSES}")
-    return model
-    
 MODEL_REGISTRY = {
     "resnet50" : build_resnet50,
-    "efficientnet_b0" : build_efficientnet_b0,
-    "vgg16" : build_vgg16
+    "efficientnet_b0" : build_efficientnet_b0
 }
 
 def get_model(model_name : str, pretrained : bool = True) -> FERModel:

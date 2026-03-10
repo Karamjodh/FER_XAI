@@ -19,7 +19,7 @@ REPORT_PATH      = REPORT_DIR / "fer_xai_report.html"
 
 BASELINE = {
     "model":     "AlexNet (Baseline)",
-    "test_acc":  0.6500,
+    "accuracy":  0.6500,
     "macro_f1":  0.6100,
     "mean_auc":  0.7200,
 }
@@ -45,11 +45,11 @@ def load_model_results(model_name: str, dataset_name: str) -> dict:
         results = json.load(f)
 
     print(f"  ✅ Loaded results: {model_name} | "
-          f"acc={results.get('test_acc', 0):.1%}")
+          f"acc={results.get('accuracy', 0):.1%}")
     return results
 
 def load_explanation_images(
-    method:       str,   # "lime" or "shap"
+    method:       str,
     model_name:   str,
     dataset_name: str,
     max_images:   int = 6
@@ -149,7 +149,6 @@ def html_header(dataset_name: str, generated: str) -> str:
             color: var(--text);
         }}
 
-        /* ── Hero ── */
         .hero {{
             background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
             padding: 60px 40px;
@@ -222,14 +221,12 @@ def html_header(dataset_name: str, generated: str) -> str:
             border-radius: 6px;
         }}
 
-        /* ── Container ── */
         .container {{
             max-width: 1300px;
             margin: 0 auto;
             padding: 36px 24px;
         }}
 
-        /* ── Section ── */
         .section {{
             background: var(--surface);
             border: 1px solid var(--border);
@@ -268,7 +265,6 @@ def html_header(dataset_name: str, generated: str) -> str:
             border-bottom: 1px solid var(--border);
         }}
 
-        /* ── Table ── */
         table {{
             width: 100%;
             border-collapse: collapse;
@@ -299,7 +295,6 @@ def html_header(dataset_name: str, generated: str) -> str:
         .baseline td {{ color: var(--muted); }}
         .best {{ color: var(--accent); font-weight: 600; }}
 
-        /* ── Badges ── */
         .badge {{
             display: inline-flex;
             align-items: center;
@@ -310,27 +305,11 @@ def html_header(dataset_name: str, generated: str) -> str:
             letter-spacing: 0.3px;
         }}
 
-        .badge-green {{
-            background: #d1fae5;
-            color: #065f46;
-        }}
+        .badge-green {{ background: #d1fae5; color: #065f46; }}
+        .badge-red   {{ background: #fee2e2; color: #991b1b; }}
+        .badge-blue  {{ background: #e0e7ff; color: #3730a3; }}
 
-        .badge-red {{
-            background: #fee2e2;
-            color: #991b1b;
-        }}
-
-        .badge-blue {{
-            background: #e0e7ff;
-            color: #3730a3;
-        }}
-
-        /* ── TOC ── */
-        .toc {{
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }}
+        .toc {{ display: flex; flex-wrap: wrap; gap: 8px; }}
 
         .toc a {{
             font-size: 0.85em;
@@ -350,7 +329,6 @@ def html_header(dataset_name: str, generated: str) -> str:
             color: white;
         }}
 
-        /* ── Image grids ── */
         .img-grid {{
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
@@ -370,11 +348,7 @@ def html_header(dataset_name: str, generated: str) -> str:
             border-color: #c7d2fe;
         }}
 
-        .img-card img {{
-            width: 100%;
-            height: auto;
-            display: block;
-        }}
+        .img-card img {{ width: 100%; height: auto; display: block; }}
 
         .img-card .caption {{
             padding: 8px 12px;
@@ -385,7 +359,6 @@ def html_header(dataset_name: str, generated: str) -> str:
             border-top: 1px solid var(--border);
         }}
 
-        /* ── Plot row ── */
         .plot-row {{
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
@@ -417,7 +390,6 @@ def html_header(dataset_name: str, generated: str) -> str:
             text-align: center;
         }}
 
-        /* ── Footer ── */
         footer {{
             text-align: center;
             padding: 32px;
@@ -436,7 +408,7 @@ def html_header(dataset_name: str, generated: str) -> str:
     <p class="hero-sub">CNN-based emotion classification with LIME & SHAP interpretability</p>
     <div class="hero-badges">
         <span>Dataset: {dataset_name.upper()}</span>
-        <span>ResNet-50 · EfficientNet-B0 · VGG-16</span>
+        <span>ResNet-50 · EfficientNet-B0</span>
         <span>Generated: {generated}</span>
     </div>
 </div>
@@ -463,7 +435,7 @@ def html_footer() -> str:
     return """
     <footer>
         XAI Facial Emotion Recognition &nbsp;·&nbsp;
-        ResNet-50 · EfficientNet-B0 · VGG-16 &nbsp;·&nbsp;
+        ResNet-50 · EfficientNet-B0 &nbsp;·&nbsp;
         LIME + SHAP Explanations
     </footer>
 </div>
@@ -479,7 +451,7 @@ def html_comparison_table(data: dict) -> str:
     <tr class="baseline">
         <td>{b['model']}</td>
         <td>—</td>
-        <td>{b['test_acc']:.1%}</td>
+        <td>{b['accuracy']:.1%}</td>
         <td>{b['macro_f1']:.1%}</td>
         <td>{b['mean_auc']:.1%}</td>
         <td><span class="badge badge-blue">Baseline</span></td>
@@ -490,7 +462,7 @@ def html_comparison_table(data: dict) -> str:
     for m in data["models"]:
         r = m["results"]
         if r:
-            accs.append(r.get("test_acc", 0))
+            accs.append(r.get("accuracy", 0))
             f1s.append(r.get("macro_f1", 0))
             aucs.append(r.get("mean_auc", 0))
 
@@ -510,11 +482,11 @@ def html_comparison_table(data: dict) -> str:
     </tr>"""
             continue
 
-        acc     = r.get("test_acc", 0)
-        f1      = r.get("macro_f1", 0)
-        auc     = r.get("mean_auc", 0)
-        epochs  = r.get("best_epoch", "—")
-        beats   = acc > data["baseline"]["test_acc"]
+        acc    = r.get("accuracy", 0)
+        f1     = r.get("macro_f1", 0)
+        auc    = r.get("mean_auc", 0)
+        epochs = r.get("best_epoch", "—")
+        beats  = acc > data["baseline"]["accuracy"]
 
         acc_cls = "best" if acc == best_acc else ""
         f1_cls  = "best" if f1  == best_f1  else ""
@@ -612,10 +584,8 @@ def generate_report(dataset_name: str = "fer2013") -> Path:
     print(f"  Generating XAI-FER Report")
     print(f"{'='*60}")
 
-    # Collect all data
     data = collect_all_data(dataset_name)
 
-    # Build HTML
     print("\n  Building HTML...")
     html = ""
     html += html_header(dataset_name, data["generated"])
@@ -638,7 +608,6 @@ def generate_report(dataset_name: str = "fer2013") -> Path:
                 "shap", data)
     html += html_footer()
 
-    # Save report
     with open(REPORT_PATH, "w", encoding="utf-8") as f:
         f.write(html)
 

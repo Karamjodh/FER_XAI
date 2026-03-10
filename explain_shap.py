@@ -336,7 +336,7 @@ def explain_model(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model",   type=str, default="resnet50",
-                        choices=["resnet50", "efficientnet_b0", "vgg16"])
+                        choices=["resnet50", "efficientnet_b0"])
     parser.add_argument("--dataset", type=str, default="fer2013")
     parser.add_argument("--samples", type=int, default=20,
                         help="Number of test images to explain")
