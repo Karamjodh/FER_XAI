@@ -1,3 +1,4 @@
+import random
 import numpy as np
 import pandas as pd
 from PIL import Image 
@@ -93,16 +94,21 @@ class FER2013Dataset(Dataset):
 class RAFDBDataset(Dataset):
     """
     RAF-DB dataset loader.
-    
-    Expected structure:
-        C:/rafdb/
-        ├── DATASET/
-        │   ├── train/   ← image files (e.g. train_00001_aligned.jpg)
-        │   └── test/    ← image files (e.g. test_0001_aligned.jpg)
-        ├── train_labels.csv   ← columns: image, label (1-7)
-        └── test_labels.csv    ← columns: image, label (1-7)
 
-    RAF-DB label mapping (1-indexed) → Unified labels (0-indexed):
+    Expected structure:
+        data/rafdb/
+        ├── DATASET/
+        │   ├── train/
+        │   │   ├── 1/   ← Surprise
+        │   │   ├── 2/   ← Fear
+        │   │   ├── 3/   ← Disgust
+        │   │   ├── 4/   ← Happy
+        │   │   ├── 5/   ← Sad
+        │   │   ├── 6/   ← Angry
+        │   │   └── 7/   ← Neutral
+        │   └── test/    ← same structure
+
+    RAF-DB folder (1-indexed) → Unified labels (0-indexed):
         1 → Surprise  (6)
         2 → Fear      (2)
         3 → Disgust   (1)
@@ -112,7 +118,7 @@ class RAFDBDataset(Dataset):
         7 → Neutral   (4)
     """
 
-    # RAF-DB labels are 1-indexed → map to unified 0-indexed
+    # RAF-DB folder names are 1-indexed → map to unified 0-indexed
     RAFDB_TO_UNIFIED = {
         1: 6,  # Surprise
         2: 2,  # Fear
@@ -125,32 +131,46 @@ class RAFDBDataset(Dataset):
 
     def __init__(self, split: str = "train", transform=None):
         self.transform = transform
-        self.split = split
+        self.split     = split
 
-        # RAF-DB only has train/test (no separate val in CSV)
-        # We use test CSV for both val and test splits
+        # RAF-DB has train and test folders
+        # val → first 80% of test, test → last 20% of test
         if split == "train":
-            csv_path   = RAFDB_DIR / "train_labels.csv"
-            img_folder = RAFDB_DIR / "DATASET" / "train"
+            base_folder = RAFDB_DIR / "DATASET" / "train"
         else:
-            # val and test both use the test set
-            csv_path   = RAFDB_DIR / "test_labels.csv"
-            img_folder = RAFDB_DIR / "DATASET" / "test"
+            base_folder = RAFDB_DIR / "DATASET" / "test"
 
-        df = pd.read_csv(csv_path)
-        self.img_folder = img_folder
-        self.image_names = df["image"].values
-        self.labels      = df["label"].values
+        # Collect all image paths and labels from subfolders
+        self.image_paths = []
+        self.labels      = []
 
-        # If val split → use first 80%, test → last 20%
+        for folder_id in range(1, 8):   # folders 1-7
+            folder = base_folder / str(folder_id)
+            if not folder.exists():
+                print(f"  ⚠ Folder not found: {folder}")
+                continue
+            imgs = list(folder.glob("*.jpg")) + \
+                   list(folder.glob("*.png")) + \
+                   list(folder.glob("*.jpeg"))
+            for img_path in imgs:
+                self.image_paths.append(img_path)
+                self.labels.append(folder_id)
+
+        # ── KEY FIX: Shuffle before split to mix all classes ──
+        combined = list(zip(self.image_paths, self.labels))
+        random.seed(SEED)        # fixed seed → reproducible
+        random.shuffle(combined) # shuffle so all classes are mixed
+
+        # Split val/test from test folder
         if split == "val":
-            cut = int(0.8 * len(self.image_names))
-            self.image_names = self.image_names[:cut]
-            self.labels      = self.labels[:cut]
+            cut      = int(0.8 * len(combined))
+            combined = combined[:cut]
         elif split == "test":
-            cut = int(0.8 * len(self.image_names))
-            self.image_names = self.image_names[cut:]
-            self.labels      = self.labels[cut:]
+            cut      = int(0.8 * len(combined))
+            combined = combined[cut:]
+
+        self.image_paths = [x[0] for x in combined]
+        self.labels      = [x[1] for x in combined]
 
         print(f"RAFDB[{split}] : {len(self.labels)} samples")
         unified = [self.RAFDB_TO_UNIFIED[l] for l in self.labels]
@@ -160,9 +180,8 @@ class RAFDBDataset(Dataset):
         return len(self.labels)
 
     def __getitem__(self, idx):
-        img_path = self.img_folder / self.image_names[idx]
-        image    = Image.open(img_path).convert("RGB")
-        label    = self.RAFDB_TO_UNIFIED[int(self.labels[idx])]
+        image = Image.open(self.image_paths[idx]).convert("RGB")
+        label = self.RAFDB_TO_UNIFIED[int(self.labels[idx])]
         if self.transform:
             image = self.transform(image)
         return image, label

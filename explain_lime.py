@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from pathlib import Path
 from typing import Optional
+import random
 
 import torch
 import torch.nn.functional as F
@@ -16,13 +17,13 @@ from lime.wrappers.scikit_image import SegmentationAlgorithm
 from skimage.segmentation import mark_boundaries
 
 from Config import (
-    CKPT_DIR, UNIFIED_CLASSES, NUM_CLASSES, IMG_SIZE
+    CKPT_DIR, UNIFIED_CLASSES, NUM_CLASSES, IMG_SIZE, SEED
 )
 from Models import get_model, load_checkpoint
 
 # ── Settings ────────────────────────────────────────────────────
-NUM_SAMPLES      = 1000   # LIME perturbations per image
-NUM_FEATURES     = 8      # Top superpixel regions to highlight
+NUM_SAMPLES      = 1000
+NUM_FEATURES     = 8
 BATCH_SIZE_LIME  = 32
 EXPLANATIONS_DIR = Path("outputs/explanations/lime")
 EXPLANATIONS_DIR.mkdir(parents=True, exist_ok=True)
@@ -53,8 +54,8 @@ def make_predict_fn(model, device):
 
     return predict_fn
 
-# ── Load test samples ─────────────────────────────────────────────
-def load_test_samples(dataset_name: str, num_samples: int = 20):
+# ── Load FER2013 test samples ─────────────────────────────────────
+def load_fer2013_samples(num_samples: int = 20):
     import pandas as pd
     from Config import FER_DIR
 
@@ -62,15 +63,17 @@ def load_test_samples(dataset_name: str, num_samples: int = 20):
     df       = pd.read_csv(csv_path)
     test_df  = df[df["Usage"] == "PrivateTest"].reset_index(drop=True)
 
+    FER_TO_UNIFIED = {0:0, 1:1, 2:2, 3:3, 4:5, 5:6, 6:4}
+
     if num_samples < NUM_CLASSES:
-        selected_df = test_df.sample(num_samples, random_state=42)
+        selected_df = test_df.sample(num_samples, random_state=SEED)
     else:
         samples_per_class = num_samples // NUM_CLASSES
         selected = []
         for class_idx in range(NUM_CLASSES):
             class_rows = test_df[test_df["emotion"] == class_idx]
             n = min(samples_per_class, len(class_rows))
-            selected.append(class_rows.sample(n, random_state=42))
+            selected.append(class_rows.sample(n, random_state=SEED))
         selected_df = pd.concat(selected).reset_index(drop=True)
 
     images, labels = [], []
@@ -83,23 +86,72 @@ def load_test_samples(dataset_name: str, num_samples: int = 20):
         img = Image.fromarray(pixels, mode="L").convert("RGB")
         img = resize(img)
         images.append(img)
-        labels.append(int(row["emotion"]))
+        labels.append(FER_TO_UNIFIED[int(row["emotion"])])
 
-    print(f"  Loaded {len(images)} test samples")
+    print(f"  Loaded {len(images)} FER2013 test samples")
     return images, labels
+
+# ── Load RAF-DB test samples ──────────────────────────────────────
+def load_rafdb_samples(num_samples: int = 20):
+    from Config import RAFDB_DIR
+
+    RAFDB_TO_UNIFIED = {
+        1: 6,  # Surprise
+        2: 2,  # Fear
+        3: 1,  # Disgust
+        4: 3,  # Happy
+        5: 5,  # Sad
+        6: 0,  # Angry
+        7: 4,  # Neutral
+    }
+
+    test_folder = RAFDB_DIR / "DATASET" / "test"
+    samples_per_class = max(1, num_samples // NUM_CLASSES)
+
+    images, labels = [], []
+    resize = transforms.Resize((IMG_SIZE, IMG_SIZE))
+    random.seed(SEED)
+
+    for folder_id in range(1, 8):
+        folder = test_folder / str(folder_id)
+        if not folder.exists():
+            print(f"  ⚠ Folder not found: {folder}")
+            continue
+
+        imgs = list(folder.glob("*.jpg"))  + \
+               list(folder.glob("*.png"))  + \
+               list(folder.glob("*.jpeg"))
+        random.shuffle(imgs)
+        chosen = imgs[:samples_per_class]
+
+        for img_path in chosen:
+            img = Image.open(img_path).convert("RGB")
+            img = resize(img)
+            images.append(img)
+            labels.append(RAFDB_TO_UNIFIED[folder_id])
+
+    print(f"  Loaded {len(images)} RAF-DB test samples")
+    return images, labels
+
+# ── Unified loader ────────────────────────────────────────────────
+def load_test_samples(dataset_name: str, num_samples: int = 20):
+    if dataset_name == "fer2013":
+        return load_fer2013_samples(num_samples)
+    elif dataset_name == "rafdb":
+        return load_rafdb_samples(num_samples)
+    else:
+        raise ValueError(f"Unknown dataset: {dataset_name}")
 
 # ── LIME explanation ──────────────────────────────────────────────
 def generate_lime_explanation(image: Image.Image, predict_fn, num_samples: int = NUM_SAMPLES):
-    explainer  = lime_image.LimeImageExplainer()
-    img_array  = np.array(image)
+    explainer = lime_image.LimeImageExplainer()
+    img_array = np.array(image)
 
-    # Finer segmentation focused on facial regions
-    # smaller kernel_size = more segments = finer facial detail
     segmenter = SegmentationAlgorithm(
         "quickshift",
-        kernel_size = 1.5,   # finer than before (was 2)
-        max_dist    = 20,    # tighter segments (was 50)
-        ratio       = 0.2    # more color sensitivity (was 0.1)
+        kernel_size = 1.5,
+        max_dist    = 20,
+        ratio       = 0.2
     )
 
     explanation = explainer.explain_instance(
@@ -138,21 +190,24 @@ def visualize_explanation(
         ax.set_facecolor('#0f0f0f')
 
     # ── Panel 1: Original ──
-    axes[0].imshow(img_array, cmap='gray')
+    axes[0].imshow(img_array)
     axes[0].set_title(
         f"Original\nTrue: {UNIFIED_CLASSES[true_label]}",
         fontsize=11, fontweight="bold", color='white'
     )
     axes[0].axis("off")
 
-    # ── Panel 2: Positive regions only (supporting) ──
+    # ── Panel 2: Positive regions only ──
     temp, mask = explanation.get_image_and_mask(
         pred_label,
         positive_only = True,
         num_features  = num_features,
-        hide_rest     = True   # hide everything else → cleaner!
+        hide_rest     = True
     )
-    axes[1].imshow(mark_boundaries(temp / 255.0 if temp.max() > 1 else temp, mask, color=(1, 0.8, 0)))
+    axes[1].imshow(mark_boundaries(
+        temp / 255.0 if temp.max() > 1 else temp,
+        mask, color=(1, 0.8, 0)
+    ))
     axes[1].set_title(
         f"Supporting Regions\nPred: {UNIFIED_CLASSES[pred_label]} ({pred_probs[pred_label]:.1%})",
         fontsize=11, fontweight="bold",
@@ -160,39 +215,40 @@ def visualize_explanation(
     )
     axes[1].axis("off")
 
-    # ── Panel 3: Positive + Negative (all contributing) ──
+    # ── Panel 3: All contributing regions ──
     temp2, mask2 = explanation.get_image_and_mask(
         pred_label,
         positive_only = False,
         num_features  = num_features,
         hide_rest     = True
     )
-    axes[2].imshow(mark_boundaries(temp2 / 255.0 if temp2.max() > 1 else temp2, mask2))
+    axes[2].imshow(mark_boundaries(
+        temp2 / 255.0 if temp2.max() > 1 else temp2,
+        mask2
+    ))
     axes[2].set_title(
-        f"All Regions\nGreen=For | Red=Against",
+        "All Regions\nGreen=For | Red=Against",
         fontsize=11, color='white'
     )
     axes[2].axis("off")
 
-    # ── Panel 4: Heatmap of LIME weights ──
-    # Shows pixel-level importance as a heatmap
-    segments    = explanation.segments
+    # ── Panel 4: Importance heatmap ──
+    segments     = explanation.segments
     lime_weights = dict(explanation.local_exp[pred_label])
-    heatmap = np.zeros(segments.shape, dtype=np.float32)
+    heatmap      = np.zeros(segments.shape, dtype=np.float32)
     for seg_id, weight in lime_weights.items():
         heatmap[segments == seg_id] = weight
 
-    # Normalize heatmap
     if heatmap.max() != heatmap.min():
         heatmap_norm = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min())
     else:
         heatmap_norm = heatmap
 
-    axes[3].imshow(img_array, cmap='gray', alpha=0.5)
+    axes[3].imshow(img_array, alpha=0.5)
     im = axes[3].imshow(heatmap_norm, cmap='RdYlGn', alpha=0.6, vmin=0, vmax=1)
     plt.colorbar(im, ax=axes[3], fraction=0.046, pad=0.04)
     axes[3].set_title(
-        f"Importance Heatmap\nRed=High | Green=Low",
+        "Importance Heatmap\nRed=High | Green=Low",
         fontsize=11, color='white'
     )
     axes[3].axis("off")
@@ -206,9 +262,7 @@ def visualize_explanation(
         f"LIME: True={UNIFIED_CLASSES[true_label]} | "
         f"Pred={UNIFIED_CLASSES[pred_label]} | "
         f"{'✓ Correct' if correct else '✗ Wrong'}\n{prob_text}",
-        fontsize=9,
-        color='white',
-        y=0.02
+        fontsize=9, color='white', y=0.02
     )
 
     plt.tight_layout(rect=[0, 0.06, 1, 1])
@@ -236,6 +290,10 @@ def explain_model(
     device    = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     ckpt_path = CKPT_DIR / f"{model_name}_{dataset_name}_best.pth"
 
+    if not ckpt_path.exists():
+        print(f"  ❌ Checkpoint not found: {ckpt_path}")
+        return None
+
     model = get_model(model_name, pretrained=False).to(device)
     load_checkpoint(model, str(ckpt_path), device)
     model.eval()
@@ -253,7 +311,6 @@ def explain_model(
     for idx, (image, true_label) in enumerate(zip(images, labels)):
         print(f"\n  [{idx+1}/{len(images)}] True: {UNIFIED_CLASSES[true_label]}")
 
-        # Get prediction
         transform = get_lime_transform()
         tensor    = transform(image).unsqueeze(0).to(device)
         with torch.no_grad():
@@ -306,10 +363,11 @@ def explain_model(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model",   type=str, default="resnet50",
+    parser.add_argument("--model",        type=str, default="resnet50",
                         choices=["resnet50", "efficientnet_b0"])
-    parser.add_argument("--dataset", type=str, default="fer2013")
-    parser.add_argument("--samples", type=int, default=20)
+    parser.add_argument("--dataset",      type=str, default="fer2013",
+                        choices=["fer2013", "rafdb"])
+    parser.add_argument("--samples",      type=int, default=20)
     parser.add_argument("--lime-samples", type=int, default=1000)
     args = parser.parse_args()
 

@@ -1,0 +1,58 @@
+[
+  {
+    "idx": 0,
+    "true": "Surprise",
+    "pred": "Neutral",
+    "confidence": 0.6200684309005737,
+    "correct": false,
+    "saved": "outputs\\explanations\\lime\\resnet50_rafdb\\000_Surprise_predNeutral.png"
+  },
+  {
+    "idx": 1,
+    "true": "Fear",
+    "pred": "Happy",
+    "confidence": 0.3833473026752472,
+    "correct": false,
+    "saved": "outputs\\explanations\\lime\\resnet50_rafdb\\001_Fear_predHappy.png"
+  },
+  {
+    "idx": 2,
+    "true": "Disgust",
+    "pred": "Neutral",
+    "confidence": 0.7200375199317932,
+    "correct": false,
+    "saved": "outputs\\explanations\\lime\\resnet50_rafdb\\002_Disgust_predNeutral.png"
+  },
+  {
+    "idx": 3,
+    "true": "Happy",
+    "pred": "Neutral",
+    "confidence": 0.6103214621543884,
+    "correct": false,
+    "saved": "outputs\\explanations\\lime\\resnet50_rafdb\\003_Happy_predNeutral.png"
+  },
+  {
+    "idx": 4,
+    "true": "Sad",
+    "pred": "Sad",
+    "confidence": 0.998492956161499,
+    "correct": true,
+    "saved": "outputs\\explanations\\lime\\resnet50_rafdb\\004_Sad_predSad.png"
+  },
+  {
+    "idx": 5,
+    "true": "Angry",
+    "pred": "Angry",
+    "confidence": 0.5550493001937866,
+    "correct": true,
+    "saved": "outputs\\explanations\\lime\\resnet50_rafdb\\005_Angry_predAngry.png"
+  },
+  {
+    "idx": 6,
+    "true": "Neutral",
+    "pred": "Neutral",
+    "confidence": 0.869077205657959,
+    "correct": true,
+    "saved": "outputs\\explanations\\lime\\resnet50_rafdb\\006_Neutral_predNeutral.png"
+  }
+]
