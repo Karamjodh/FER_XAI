@@ -1,0 +1,114 @@
+[
+  {
+    "idx": 0,
+    "true": "Angry",
+    "pred": "Sad",
+    "confidence": 0.6873769164085388,
+    "correct": false,
+    "saved": "outputs\\explanations\\shap\\efficientnet_b0_fer2013\\000_Angry_predSad.png"
+  },
+  {
+    "idx": 1,
+    "true": "Angry",
+    "pred": "Angry",
+    "confidence": 0.8271928429603577,
+    "correct": true,
+    "saved": "outputs\\explanations\\shap\\efficientnet_b0_fer2013\\001_Angry_predAngry.png"
+  },
+  {
+    "idx": 2,
+    "true": "Disgust",
+    "pred": "Disgust",
+    "confidence": 0.9837634563446045,
+    "correct": true,
+    "saved": "outputs\\explanations\\shap\\efficientnet_b0_fer2013\\002_Disgust_predDisgust.png"
+  },
+  {
+    "idx": 3,
+    "true": "Disgust",
+    "pred": "Disgust",
+    "confidence": 0.9956321120262146,
+    "correct": true,
+    "saved": "outputs\\explanations\\shap\\efficientnet_b0_fer2013\\003_Disgust_predDisgust.png"
+  },
+  {
+    "idx": 4,
+    "true": "Fear",
+    "pred": "Angry",
+    "confidence": 0.8403769135475159,
+    "correct": false,
+    "saved": "outputs\\explanations\\shap\\efficientnet_b0_fer2013\\004_Fear_predAngry.png"
+  },
+  {
+    "idx": 5,
+    "true": "Fear",
+    "pred": "Fear",
+    "confidence": 0.9132457375526428,
+    "correct": true,
+    "saved": "outputs\\explanations\\shap\\efficientnet_b0_fer2013\\005_Fear_predFear.png"
+  },
+  {
+    "idx": 6,
+    "true": "Happy",
+    "pred": "Happy",
+    "confidence": 0.7429202198982239,
+    "correct": true,
+    "saved": "outputs\\explanations\\shap\\efficientnet_b0_fer2013\\006_Happy_predHappy.png"
+  },
+  {
+    "idx": 7,
+    "true": "Happy",
+    "pred": "Happy",
+    "confidence": 0.7267771363258362,
+    "correct": true,
+    "saved": "outputs\\explanations\\shap\\efficientnet_b0_fer2013\\007_Happy_predHappy.png"
+  },
+  {
+    "idx": 8,
+    "true": "Neutral",
+    "pred": "Fear",
+    "confidence": 0.3876679837703705,
+    "correct": false,
+    "saved": "outputs\\explanations\\shap\\efficientnet_b0_fer2013\\008_Neutral_predFear.png"
+  },
+  {
+    "idx": 9,
+    "true": "Neutral",
+    "pred": "Disgust",
+    "confidence": 0.29125937819480896,
+    "correct": false,
+    "saved": "outputs\\explanations\\shap\\efficientnet_b0_fer2013\\009_Neutral_predDisgust.png"
+  },
+  {
+    "idx": 10,
+    "true": "Sad",
+    "pred": "Surprise",
+    "confidence": 0.7406302690505981,
+    "correct": false,
+    "saved": "outputs\\explanations\\shap\\efficientnet_b0_fer2013\\010_Sad_predSurprise.png"
+  },
+  {
+    "idx": 11,
+    "true": "Sad",
+    "pred": "Surprise",
+    "confidence": 0.9042633771896362,
+    "correct": false,
+    "saved": "outputs\\explanations\\shap\\efficientnet_b0_fer2013\\011_Sad_predSurprise.png"
+  },
+  {
+    "idx": 12,
+    "true": "Surprise",
+    "pred": "Neutral",
+    "confidence": 0.4367876946926117,
+    "correct": false,
+    "saved": "outputs\\explanations\\shap\\efficientnet_b0_fer2013\\012_Surprise_predNeutral.png"
+  },
+  {
+    "idx": 13,
+    "true": "Surprise",
+    "pred": "Angry",
+    "confidence": 0.32596322894096375,
+    "correct": false,
+    "saved": "outputs\\explanations\\shap\\efficientnet_b0_fer2013\\013_Surprise_predAngry.png"
+  }
+]

@@ -3,56 +3,112 @@
     "idx": 0,
     "true": "Angry",
     "pred": "Sad",
-    "confidence": 0.6347301602363586,
+    "confidence": 0.6582642793655396,
     "correct": false,
     "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\000_Angry_predSad.png"
   },
   {
     "idx": 1,
-    "true": "Disgust",
+    "true": "Angry",
     "pred": "Angry",
-    "confidence": 0.9948508143424988,
-    "correct": false,
-    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\001_Disgust_predAngry.png"
+    "confidence": 0.8498117327690125,
+    "correct": true,
+    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\001_Angry_predAngry.png"
   },
   {
     "idx": 2,
-    "true": "Fear",
-    "pred": "Angry",
-    "confidence": 0.9355933666229248,
-    "correct": false,
-    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\002_Fear_predAngry.png"
+    "true": "Disgust",
+    "pred": "Disgust",
+    "confidence": 0.8826115727424622,
+    "correct": true,
+    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\002_Disgust_predDisgust.png"
   },
   {
     "idx": 3,
-    "true": "Happy",
-    "pred": "Happy",
-    "confidence": 0.9011836647987366,
+    "true": "Disgust",
+    "pred": "Disgust",
+    "confidence": 0.9922326803207397,
     "correct": true,
-    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\003_Happy_predHappy.png"
+    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\003_Disgust_predDisgust.png"
   },
   {
     "idx": 4,
-    "true": "Neutral",
-    "pred": "Neutral",
-    "confidence": 0.4819587171077728,
-    "correct": true,
-    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\004_Neutral_predNeutral.png"
+    "true": "Fear",
+    "pred": "Angry",
+    "confidence": 0.7617299556732178,
+    "correct": false,
+    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\004_Fear_predAngry.png"
   },
   {
     "idx": 5,
-    "true": "Sad",
-    "pred": "Angry",
-    "confidence": 0.5754712224006653,
+    "true": "Fear",
+    "pred": "Surprise",
+    "confidence": 0.46734103560447693,
     "correct": false,
-    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\005_Sad_predAngry.png"
+    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\005_Fear_predSurprise.png"
   },
   {
     "idx": 6,
-    "true": "Surprise",
+    "true": "Happy",
+    "pred": "Happy",
+    "confidence": 0.6093235611915588,
+    "correct": true,
+    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\006_Happy_predHappy.png"
+  },
+  {
+    "idx": 7,
+    "true": "Happy",
+    "pred": "Happy",
+    "confidence": 0.744348406791687,
+    "correct": true,
+    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\007_Happy_predHappy.png"
+  },
+  {
+    "idx": 8,
+    "true": "Neutral",
     "pred": "Neutral",
-    "confidence": 0.6845357418060303,
+    "confidence": 0.601115882396698,
+    "correct": true,
+    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\008_Neutral_predNeutral.png"
+  },
+  {
+    "idx": 9,
+    "true": "Neutral",
+    "pred": "Disgust",
+    "confidence": 0.6659955382347107,
     "correct": false,
-    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\006_Surprise_predNeutral.png"
+    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\009_Neutral_predDisgust.png"
+  },
+  {
+    "idx": 10,
+    "true": "Sad",
+    "pred": "Angry",
+    "confidence": 0.7881667017936707,
+    "correct": false,
+    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\010_Sad_predAngry.png"
+  },
+  {
+    "idx": 11,
+    "true": "Sad",
+    "pred": "Surprise",
+    "confidence": 0.8264735341072083,
+    "correct": false,
+    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\011_Sad_predSurprise.png"
+  },
+  {
+    "idx": 12,
+    "true": "Surprise",
+    "pred": "Sad",
+    "confidence": 0.2567828297615051,
+    "correct": false,
+    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\012_Surprise_predSad.png"
+  },
+  {
+    "idx": 13,
+    "true": "Surprise",
+    "pred": "Angry",
+    "confidence": 0.3563629984855652,
+    "correct": false,
+    "saved": "outputs\\explanations\\shap\\resnet50_fer2013\\013_Surprise_predAngry.png"
   }
 ]
