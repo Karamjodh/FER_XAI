@@ -1,5 +1,5 @@
 # ================================================================
-#  config.py — Central Configuration
+#  Config.py — Central Configuration
 #  All hyperparameters, paths, and settings in one place.
 #  Every other file imports from here.
 # ================================================================
@@ -8,11 +8,9 @@ from pathlib import Path
 
 # ----------------------------------------------------------------
 # SECTION 1 — PATHS
-# Path() is used instead of strings so it works on
-# Windows, Linux, and Mac without changing anything.
 # ----------------------------------------------------------------
 
-BASE_DIR    = Path(__file__).parent        # Root of project folder
+BASE_DIR    = Path(__file__).parent
 DATA_DIR    = BASE_DIR / "data"
 FER_DIR     = DATA_DIR / "fer2013"
 RAFDB_DIR   = DATA_DIR / "rafdb"
@@ -25,65 +23,53 @@ REPORTS_DIR = OUTPUTS_DIR / "reports"
 
 # ----------------------------------------------------------------
 # SECTION 2 — DATASET SETTINGS
-# FER2013 has 7 emotion classes.
-# We define a UNIFIED order used across both datasets.
 # ----------------------------------------------------------------
 
-UNIFIED_CLASSES  = ["Angry", "Disgust", "Fear", "Happy", "Neutral", "Sad", "Surprise"]
-NUM_CLASSES      = 7
-IMG_SIZE         = 224    # All pretrained models expect 224x224 input
+UNIFIED_CLASSES = ["Angry", "Disgust", "Fear", "Happy", "Neutral", "Sad", "Surprise"]
+NUM_CLASSES     = 7
+IMG_SIZE        = 224
 
 # ----------------------------------------------------------------
 # SECTION 3 — MODEL SETTINGS
-# These are the 3 models we will train and compare.
 # ----------------------------------------------------------------
 
 MODELS_TO_TRAIN = ["resnet50", "efficientnet_b0"]
 
 # ----------------------------------------------------------------
 # SECTION 4 — TRAINING HYPERPARAMETERS
-# Tuned specifically for RTX 3050 (4GB VRAM)
+#
+# Single-phase training (no freezing).
+# Friend's approach: train everything from epoch 1 with low LR.
+# Got 75% vs our 69% with 2-phase. Simpler and better.
 # ----------------------------------------------------------------
 
-BATCH_SIZE   = 32     # How many images per training step
-NUM_EPOCHS   = 50     # Maximum epochs (early stopping will kick in earlier)
-SEED         = 42     # For reproducibility — same results every run
+BATCH_SIZE          = 64      # increased from 16 → more stable gradients
+SEED                = 42
+EPOCHS              = 30      # friend used 30, clean and sufficient
+LR                  = 1e-4   # low enough to safely train pretrained weights
+WEIGHT_DECAY        = 1e-4
+EARLY_STOP_PATIENCE = 8       # stop if val_loss stagnates
 
-# Two-phase fine-tuning:
-# Phase 1 → freeze the backbone, only train the new head (fast, safe)
-# Phase 2 → unfreeze last N layers, fine-tune with low LR (boosts accuracy)
-
-PHASE1_EPOCHS   = 20
-PHASE1_LR       = 1e-3    # Higher LR ok since only head is training
-
-PHASE2_EPOCHS   = 60
-PHASE2_LR       = 1e-4    # Must be low — we're touching pretrained weights
-PHASE2_UNFREEZE = 15      # How many layers to unfreeze from the end
-
-WEIGHT_DECAY         = 1e-4   # L2 regularization — prevents overfitting
-EARLY_STOP_PATIENCE  = 25      # Stop if val_loss doesn't improve for 8 epochs
+# Label smoothing — well known to improve 1-3% on noisy datasets like FER2013
+LABEL_SMOOTHING = 0.1
 
 # ----------------------------------------------------------------
 # SECTION 5 — AUGMENTATION SETTINGS
-# Augmentation = artificially increasing dataset size by
-# randomly transforming images during training only.
+# Removed RandomErasing — it was erasing eyes/mouth on face images
 # ----------------------------------------------------------------
 
-AUGMENT_TRAIN    = True
-HORIZONTAL_FLIP  = True
-RANDOM_ROTATION  = 15       # Rotate images up to ±15 degrees
-COLOR_JITTER     = True     # Slight brightness/contrast changes
-RANDOM_ERASING   = True     # Randomly erase small patches (helps with occlusion)
+AUGMENT_TRAIN   = True
+HORIZONTAL_FLIP = True
+RANDOM_ROTATION = 10          # friend used 10, we had 15
+COLOR_JITTER    = True
+RANDOM_ERASING  = False       # REMOVED — was hurting facial feature learning
 
-# ImageNet normalization — required for pretrained models
-# These values are the mean and std of the ImageNet dataset
+# ImageNet normalization
 NORMALIZE_MEAN = [0.485, 0.456, 0.406]
 NORMALIZE_STD  = [0.229, 0.224, 0.225]
 
 # ----------------------------------------------------------------
 # SECTION 6 — CLASS IMBALANCE
-# FER2013 is heavily imbalanced — 'Happy' has 8000+ samples
-# but 'Disgust' has only ~400. Weighted loss fixes this.
 # ----------------------------------------------------------------
 
 USE_WEIGHTED_LOSS = True
@@ -92,13 +78,11 @@ USE_WEIGHTED_LOSS = True
 # SECTION 7 — EXPLAINABILITY SETTINGS
 # ----------------------------------------------------------------
 
-# LIME settings
-LIME_NUM_SAMPLES  = 1000   # More = more stable but slower
-LIME_NUM_FEATURES = 10     # Top N superpixel regions to highlight
-LIME_NUM_SEGMENTS = 50     # How many superpixels to divide face into
+LIME_NUM_SAMPLES  = 1000
+LIME_NUM_FEATURES = 10
+LIME_NUM_SEGMENTS = 50
 LIME_BATCH_SIZE   = 64
 
-# SHAP settings
 SHAP_BACKGROUND_SAMPLES = 100
 SHAP_TEST_SAMPLES       = 10
 
@@ -106,34 +90,25 @@ SHAP_TEST_SAMPLES       = 10
 # SECTION 8 — HARDWARE SETTINGS
 # ----------------------------------------------------------------
 
-USE_AMP    = True   # Automatic Mixed Precision — uses float16
-                    # Cuts VRAM usage by ~40% on RTX 3050. Always keep True.
-NUM_WORKERS = 0     # Parallel data loading threads
-PIN_MEMORY  = True  # Faster CPU→GPU data transfer
+USE_AMP     = True
+NUM_WORKERS = 0
+PIN_MEMORY  = True
 
 # ----------------------------------------------------------------
-# SECTION 9 — LOGGING
+# SECTION 9 — OPTIMIZER & SCHEDULER
+# CosineAnnealingLR smoothly decays LR — better than CyclicLR
+# which oscillates and hurts final convergence
 # ----------------------------------------------------------------
 
-LOG_INTERVAL = 10   # Print progress every 10 batches
-
+OPTIMIZER  = "adamw"
+LR_MIN     = 1e-6     # minimum LR at end of cosine schedule
 
 # ----------------------------------------------------------------
-# QUICK SANITY CHECK
-# Run this file directly to confirm paths are correct:
-# python config.py
+# SECTION 10 — LOGGING
 # ----------------------------------------------------------------
 
-OPTIMIZER  = "adamw"      # options: "adam", "adamw"
-SCHEDULER1  = "cosine"    # options: "cosine", "step"
-LR_STEP_SIZE = 10        # used if SCHEDULER = "step"
-LR_GAMMA     = 0.5       # LR multiplier per step
-LR_MIN       = 1e-6      # minimum LR for cosine scheduler
-SCHEDULER2    = "cyclic"
-CYCLIC_BASE_LR  = 1e-5   # minimum LR
-CYCLIC_MAX_LR   = 5e-4   # maximum LR  
-CYCLIC_STEP     = 6     # epochs per half cycle
-ACTIVE_SCHEDULER = "cyclic"    # Which one to use (change this to switch)
+LOG_INTERVAL = 10
+
 
 if __name__ == "__main__":
     print("BASE_DIR :", BASE_DIR)
@@ -141,4 +116,4 @@ if __name__ == "__main__":
     print("CKPT_DIR :", CKPT_DIR)
     print("Classes  :", UNIFIED_CLASSES)
     print("Models   :", MODELS_TO_TRAIN)
-    print("\n✅ config.py loaded successfully")
+    print("\n✅ Config.py loaded successfully")
