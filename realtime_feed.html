@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FER XAI — Real-time Explainable Emotion Recognition</title>
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg:       #0a0c10;
+  --surface:  #111318;
+  --card:     #161a22;
+  --border:   #1f2530;
+  --accent:   #00e5ff;
+  --lime-col: #39ff14;
+  --shap-col: #ff3f7a;
+  --text:     #e8ecf0;
+  --muted:    #5a6275;
+  --angry:    #ff4444;
+  --disgust:  #aa44ff;
+  --fear:     #ff8800;
+  --happy:    #ffdd00;
+  --neutral:  #88aacc;
+  --sad:      #4488ff;
+  --surprise: #ff44cc;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
+
+/* ── HEADER ── */
+header{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  height:52px;
+  background:rgba(10,12,16,0.92);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;
+}
+.logo{
+  font-family:'Space Mono',monospace;
+  font-size:13px;font-weight:700;
+  color:var(--accent);
+  letter-spacing:0.05em;
+}
+.logo span{color:var(--muted);}
+.header-badges{display:flex;gap:8px;align-items:center;}
+.badge{
+  font-family:'Space Mono',monospace;
+  font-size:10px;padding:3px 8px;border-radius:3px;
+  letter-spacing:0.06em;font-weight:700;
+}
+.badge-lime{background:rgba(57,255,20,0.12);color:var(--lime-col);border:1px solid rgba(57,255,20,0.3);}
+.badge-shap{background:rgba(255,63,122,0.12);color:var(--shap-col);border:1px solid rgba(255,63,122,0.3);}
+.badge-live{background:rgba(0,229,255,0.12);color:var(--accent);border:1px solid rgba(0,229,255,0.3);animation:pulse-badge 2s infinite;}
+@keyframes pulse-badge{0%,100%{opacity:1;}50%{opacity:0.5;}}
+
+/* ── LAYOUT ── */
+.layout{
+  position:fixed;top:52px;left:0;right:0;bottom:0;
+  display:grid;
+  grid-template-columns:1fr 340px;
+  grid-template-rows:1fr 180px;
+  gap:1px;
+  background:var(--border);
+}
+
+/* ── MAIN VIDEO PANEL ── */
+.panel-video{
+  grid-row:1;grid-column:1;
+  background:var(--surface);
+  position:relative;
+  overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+}
+#videoWrap{position:relative;display:inline-block;}
+#video{
+  display:block;
+  border-radius:0;
+  transform:scaleX(-1);
+}
+#overlayCanvas{
+  position:absolute;top:0;left:0;
+  transform:scaleX(-1);
+  pointer-events:none;
+}
+.panel-label{
+  position:absolute;top:14px;left:14px;
+  font-family:'Space Mono',monospace;
+  font-size:10px;color:var(--muted);
+  letter-spacing:0.1em;
+  background:rgba(10,12,16,0.7);
+  padding:4px 8px;border-radius:3px;
+  border:1px solid var(--border);
+}
+.fps-counter{
+  position:absolute;top:14px;right:14px;
+  font-family:'Space Mono',monospace;
+  font-size:10px;color:var(--accent);
+  background:rgba(10,12,16,0.7);
+  padding:4px 8px;border-radius:3px;
+  border:1px solid rgba(0,229,255,0.2);
+}
+
+/* ── RIGHT PANEL ── */
+.panel-right{
+  grid-row:1/3;grid-column:2;
+  background:var(--card);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.panel-section{
+  padding:14px 16px;
+  border-bottom:1px solid var(--border);
+}
+.section-title{
+  font-family:'Space Mono',monospace;
+  font-size:9px;color:var(--muted);
+  letter-spacing:0.12em;
+  margin-bottom:10px;
+}
+
+/* emotion readout */
+.emotion-primary{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:10px;
+}
+.emotion-icon{font-size:32px;line-height:1;}
+.emotion-name{
+  font-family:'Space Mono',monospace;
+  font-size:20px;font-weight:700;
+  color:var(--text);
+  letter-spacing:0.03em;
+}
+.emotion-conf{
+  font-family:'Space Mono',monospace;
+  font-size:11px;color:var(--muted);
+}
+
+/* bars */
+.emo-bars{display:flex;flex-direction:column;gap:5px;}
+.emo-row{display:flex;align-items:center;gap:8px;}
+.emo-lbl{
+  font-family:'Space Mono',monospace;
+  font-size:9px;width:52px;color:var(--muted);
+  letter-spacing:0.05em;
+}
+.emo-bar-track{
+  flex:1;height:5px;border-radius:2px;
+  background:rgba(255,255,255,0.05);
+  overflow:hidden;
+}
+.emo-bar-fill{
+  height:100%;border-radius:2px;
+  transition:width 0.15s ease;
+}
+.emo-pct{
+  font-family:'Space Mono',monospace;
+  font-size:9px;color:var(--muted);width:30px;text-align:right;
+}
+
+/* XAI legend */
+.xai-legend{display:flex;flex-direction:column;gap:8px;}
+.xai-method{
+  display:flex;align-items:flex-start;gap:10px;
+}
+.xai-dot{
+  width:10px;height:10px;border-radius:2px;
+  margin-top:3px;flex-shrink:0;
+}
+.xai-dot-lime{background:var(--lime-col);}
+.xai-dot-shap{background:var(--shap-col);}
+.xai-text{}
+.xai-method-name{
+  font-family:'Space Mono',monospace;
+  font-size:10px;font-weight:700;
+  margin-bottom:2px;
+}
+.xai-method-desc{font-size:11px;color:var(--muted);line-height:1.4;}
+
+/* toggle controls */
+.controls{display:flex;flex-direction:column;gap:8px;}
+.toggle-row{
+  display:flex;align-items:center;justify-content:space-between;
+}
+.toggle-label{font-size:12px;color:var(--text);}
+.toggle{
+  position:relative;width:36px;height:20px;cursor:pointer;
+}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-slider{
+  position:absolute;inset:0;border-radius:10px;
+  background:var(--border);transition:0.2s;
+}
+.toggle-slider::before{
+  content:'';position:absolute;
+  width:14px;height:14px;
+  left:3px;top:3px;
+  border-radius:50%;
+  background:var(--muted);
+  transition:0.2s;
+}
+.toggle input:checked + .toggle-slider{background:rgba(0,229,255,0.3);}
+.toggle input:checked + .toggle-slider::before{transform:translateX(16px);background:var(--accent);}
+
+/* AU region list */
+.au-list{display:flex;flex-direction:column;gap:6px;flex:1;overflow-y:auto;padding:14px 16px;}
+.au-item{
+  display:flex;align-items:center;gap:10px;
+  padding:7px 10px;border-radius:6px;
+  background:rgba(255,255,255,0.03);
+  border:1px solid transparent;
+  transition:all 0.15s ease;
+}
+.au-item.active{
+  border-color:rgba(0,229,255,0.2);
+  background:rgba(0,229,255,0.05);
+}
+.au-num{
+  font-family:'Space Mono',monospace;
+  font-size:9px;color:var(--accent);
+  min-width:28px;
+}
+.au-info{}
+.au-name{font-size:11px;font-weight:500;}
+.au-region{font-size:10px;color:var(--muted);}
+.au-score{
+  margin-left:auto;
+  font-family:'Space Mono',monospace;
+  font-size:10px;color:var(--muted);
+}
+.au-score.high{color:var(--lime-col);}
+
+/* ── BOTTOM PANEL ── */
+.panel-bottom{
+  grid-row:2;grid-column:1;
+  background:var(--card);
+  display:flex;align-items:center;
+  padding:0 16px;
+  gap:0;
+  overflow:hidden;
+}
+.mode-tabs{
+  display:flex;gap:1px;
+  background:var(--border);
+  border-radius:6px;
+  overflow:hidden;
+  flex-shrink:0;
+  margin-right:16px;
+}
+.mode-tab{
+  font-family:'Space Mono',monospace;
+  font-size:10px;letter-spacing:0.06em;
+  padding:8px 14px;cursor:pointer;
+  border:none;background:var(--surface);color:var(--muted);
+  transition:all 0.15s;
+  white-space:nowrap;
+}
+.mode-tab.active{background:var(--card);color:var(--text);}
+.mode-tab:hover:not(.active){color:var(--text);}
+
+.history-strip{
+  display:flex;gap:8px;
+  overflow-x:auto;
+  flex:1;
+  align-items:center;
+  scrollbar-width:none;
+}
+.history-strip::-webkit-scrollbar{display:none;}
+.snap{
+  flex-shrink:0;
+  width:48px;height:48px;
+  border-radius:6px;
+  border:2px solid var(--border);
+  overflow:hidden;
+  cursor:pointer;
+  position:relative;
+  transition:border-color 0.15s;
+}
+.snap:hover{border-color:var(--accent);}
+.snap img{width:100%;height:100%;object-fit:cover;}
+.snap-label{
+  position:absolute;bottom:0;left:0;right:0;
+  font-family:'Space Mono',monospace;
+  font-size:7px;
+  text-align:center;padding:2px;
+  background:rgba(0,0,0,0.7);
+}
+
+.info-bar{
+  margin-left:16px;
+  font-size:11px;color:var(--muted);
+  line-height:1.5;
+  flex-shrink:0;max-width:200px;
+}
+
+/* ── STARTUP OVERLAY ── */
+#startOverlay{
+  position:fixed;inset:0;z-index:200;
+  background:var(--bg);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:20px;
+}
+.start-title{
+  font-family:'Space Mono',monospace;
+  font-size:24px;font-weight:700;
+  color:var(--text);letter-spacing:0.04em;
+  text-align:center;
+}
+.start-title span{color:var(--accent);}
+.start-sub{
+  font-size:14px;color:var(--muted);text-align:center;
+  max-width:440px;line-height:1.6;
+}
+.start-btn{
+  font-family:'Space Mono',monospace;
+  font-size:13px;font-weight:700;letter-spacing:0.08em;
+  padding:14px 32px;border-radius:6px;
+  background:var(--accent);color:var(--bg);
+  border:none;cursor:pointer;
+  transition:opacity 0.15s;
+}
+.start-btn:hover{opacity:0.85;}
+.start-credits{
+  font-family:'Space Mono',monospace;
+  font-size:10px;color:var(--muted);
+  text-align:center;letter-spacing:0.05em;
+  line-height:1.8;
+}
+
+/* no-face indicator */
+#noFace{
+  display:none;
+  position:absolute;
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  font-family:'Space Mono',monospace;
+  font-size:13px;color:var(--muted);
+  text-align:center;
+  pointer-events:none;
+}
+#noFace.show{display:block;}
+
+/* scrollbar for au-list */
+.au-list::-webkit-scrollbar{width:3px;}
+.au-list::-webkit-scrollbar-track{background:transparent;}
+.au-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- STARTUP -->
+<div id="startOverlay">
+  <div class="start-title">FER <span>XAI</span> Live</div>
+  <div class="start-sub">
+    Real-time Facial Expression Recognition with<br>
+    live <b style="color:var(--lime-col)">LIME</b> &amp; <b style="color:var(--shap-col)">SHAP</b> attribution overlay.<br>
+    Position your face in the camera frame to begin.
+  </div>
+  <button class="start-btn" id="startBtn">START CAMERA</button>
+  <div class="start-credits">
+    Karamjodh Singh · Aadarsh Ahlawat<br>
+    Supervised by Ms. Richa Tiwari · Chandigarh University<br>
+    Major Project — 23CST-399 · CS221
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">FER<span>/</span>XAI<span> ·</span> LIVE SHOWCASE</div>
+  <div class="header-badges">
+    <span class="badge badge-lime">LIME</span>
+    <span class="badge badge-shap">SHAP</span>
+    <span class="badge badge-live">● LIVE</span>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- VIDEO -->
+  <div class="panel-video" id="videoPanel">
+    <div id="videoWrap">
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="overlayCanvas"></canvas>
+      <div id="noFace">No face detected<br><span style="font-size:10px;opacity:0.5;">Move closer to the camera</span></div>
+    </div>
+    <div class="panel-label">WEBCAM FEED</div>
+    <div class="fps-counter" id="fpsCounter">0 FPS</div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel-right">
+
+    <!-- Emotion -->
+    <div class="panel-section">
+      <div class="section-title">DETECTED EMOTION</div>
+      <div class="emotion-primary">
+        <div class="emotion-icon" id="emojiDisplay">😐</div>
+        <div>
+          <div class="emotion-name" id="emotionName">NEUTRAL</div>
+          <div class="emotion-conf" id="emotionConf">Confidence: 0.0%</div>
+        </div>
+      </div>
+      <div class="emo-bars" id="emoBars">
+        <!-- generated by JS -->
+      </div>
+    </div>
+
+    <!-- XAI Legend -->
+    <div class="panel-section">
+      <div class="section-title">XAI METHOD OVERLAY</div>
+      <div class="xai-legend">
+        <div class="xai-method">
+          <div class="xai-dot xai-dot-lime"></div>
+          <div class="xai-text">
+            <div class="xai-method-name" style="color:var(--lime-col)">LIME</div>
+            <div class="xai-method-desc">Superpixel regions supporting the predicted emotion (green = positive, red = opposing)</div>
+          </div>
+        </div>
+        <div class="xai-method">
+          <div class="xai-dot xai-dot-shap"></div>
+          <div class="xai-text">
+            <div class="xai-method-name" style="color:var(--shap-col)">SHAP</div>
+            <div class="xai-method-desc">Pixel-level Shapley attribution — red pushes toward prediction, blue pushes away</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="panel-section">
+      <div class="section-title">DISPLAY CONTROLS</div>
+      <div class="controls">
+        <div class="toggle-row">
+          <span class="toggle-label">Show LIME overlay</span>
+          <label class="toggle"><input type="checkbox" id="toggleLIME" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Show SHAP overlay</span>
+          <label class="toggle"><input type="checkbox" id="toggleSHAP" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Show face mesh</span>
+          <label class="toggle"><input type="checkbox" id="toggleMesh"><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Show AU labels</span>
+          <label class="toggle"><input type="checkbox" id="toggleAU" checked><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- AU list -->
+    <div class="section-title" style="padding:12px 16px 0;font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.12em;">ACTIVE ACTION UNITS</div>
+    <div class="au-list" id="auList">
+      <!-- generated by JS -->
+    </div>
+
+  </div>
+
+  <!-- BOTTOM PANEL -->
+  <div class="panel-bottom">
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tab-both" onclick="setMode('both')">LIME + SHAP</button>
+      <button class="mode-tab" id="tab-lime" onclick="setMode('lime')">LIME ONLY</button>
+      <button class="mode-tab" id="tab-shap" onclick="setMode('shap')">SHAP ONLY</button>
+    </div>
+    <div class="history-strip" id="historyStrip"></div>
+    <div class="info-bar">
+      <span style="color:var(--accent);font-family:'Space Mono',monospace;font-size:10px;">ResNet-50 · RAF-DB</span><br>
+      84.36% accuracy · 93.55% AUC<br>
+      EfficientNet-B0 · FER2013<br>
+      71.08% accuracy · 91.13% AUC
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const EMOTIONS = ['angry','disgusted','fearful','happy','neutral','sad','surprised'];
+const EMOTION_LABELS = ['ANGRY','DISGUST','FEAR','HAPPY','NEUTRAL','SAD','SURPRISE'];
+const EMOJIS = ['😠','🤢','😨','😄','😐','😢','😲'];
+const COLORS = {
+  angry:    '#ff4444',
+  disgusted:'#aa44ff',
+  fearful:  '#ff8800',
+  happy:    '#ffdd00',
+  neutral:  '#88aacc',
+  sad:      '#4488ff',
+  surprised:'#ff44cc'
+};
+const AU_MAP = {
+  angry:    [{num:'AU4',name:'Brow Lowerer',region:'Glabella / corrugator'},{num:'AU5',name:'Upper Lid Raiser',region:'Periocular'},{num:'AU23',name:'Lip Tightener',region:'Upper orbicularis oris'},{num:'AU24',name:'Lip Pressor',region:'Lower lip'}],
+  disgusted:[{num:'AU9',name:'Nose Wrinkler',region:'Nasalis / procerus'},{num:'AU10',name:'Upper Lip Raiser',region:'Levator labii'},{num:'AU16',name:'Lower Lip Depressor',region:'Depressor labii'},{num:'AU26',name:'Jaw Drop',region:'Masseter / pterygoid'}],
+  fearful:  [{num:'AU1',name:'Inner Brow Raise',region:'Frontalis (pars medialis)'},{num:'AU2',name:'Outer Brow Raise',region:'Frontalis (pars lateralis)'},{num:'AU5',name:'Upper Lid Raiser',region:'Levator palpebrae'},{num:'AU20',name:'Lip Stretcher',region:'Risorius / platysma'}],
+  happy:    [{num:'AU6',name:'Cheek Raiser',region:'Orbicularis oculi'},{num:'AU12',name:'Lip Corner Puller',region:'Zygomaticus major'},{num:'AU25',name:'Lips Part',region:'Depressor labii'}],
+  neutral:  [{num:'—',name:'No dominant AUs',region:'Absence of expression-specific muscle activation'}],
+  sad:      [{num:'AU1',name:'Inner Brow Raise',region:'Frontalis (pars medialis)'},{num:'AU4',name:'Brow Lowerer',region:'Corrugator supercilii'},{num:'AU15',name:'Lip Corner Depressor',region:'Depressor anguli oris'},{num:'AU17',name:'Chin Raiser',region:'Mentalis'}],
+  surprised:[{num:'AU1',name:'Inner Brow Raise',region:'Frontalis (pars medialis)'},{num:'AU2',name:'Outer Brow Raise',region:'Frontalis (pars lateralis)'},{num:'AU5',name:'Upper Lid Raiser',region:'Levator palpebrae'},{num:'AU26',name:'Jaw Drop',region:'Masseter / pterygoid'},{num:'AU27',name:'Mouth Stretch',region:'Pterygoids / digastric'}]
+};
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let mode = 'both';
+let showLIME = true, showSHAP = true, showMesh = false, showAU = true;
+let currentEmotion = 'neutral';
+let lastExpressions = {};
+let frameCount = 0, lastFpsTime = Date.now();
+let faceDetected = false;
+let snapHistory = [];
+let detectionRunning = false;
+let animFrame = null;
+
+// ─── INIT CONTROLS ────────────────────────────────────────────────────────────
+document.getElementById('toggleLIME').onchange = e => { showLIME = e.target.checked; };
+document.getElementById('toggleSHAP').onchange = e => { showSHAP = e.target.checked; };
+document.getElementById('toggleMesh').onchange = e => { showMesh = e.target.checked; };
+document.getElementById('toggleAU').onchange   = e => { showAU = e.target.checked; };
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+m).classList.add('active');
+  if (m === 'lime') { showLIME=true; showSHAP=false; document.getElementById('toggleLIME').checked=true; document.getElementById('toggleSHAP').checked=false; }
+  else if (m === 'shap') { showLIME=false; showSHAP=true; document.getElementById('toggleLIME').checked=false; document.getElementById('toggleSHAP').checked=true; }
+  else { showLIME=true; showSHAP=true; document.getElementById('toggleLIME').checked=true; document.getElementById('toggleSHAP').checked=true; }
+}
+
+// ─── EMOTION BARS ─────────────────────────────────────────────────────────────
+function buildEmoBars() {
+  const container = document.getElementById('emoBars');
+  container.innerHTML = '';
+  EMOTIONS.forEach((em, i) => {
+    const row = document.createElement('div');
+    row.className = 'emo-row';
+    row.innerHTML = `
+      <div class="emo-lbl">${EMOTION_LABELS[i].slice(0,7)}</div>
+      <div class="emo-bar-track"><div class="emo-bar-fill" id="bar-${em}" style="width:0%;background:${COLORS[em]}"></div></div>
+      <div class="emo-pct" id="pct-${em}">0%</div>`;
+    container.appendChild(row);
+  });
+}
+buildEmoBars();
+
+function updateEmoBars(expressions) {
+  EMOTIONS.forEach(em => {
+    const v = (expressions[em] || 0) * 100;
+    const bar = document.getElementById('bar-'+em);
+    const pct = document.getElementById('pct-'+em);
+    if (bar) bar.style.width = v.toFixed(1)+'%';
+    if (pct) pct.textContent = v.toFixed(0)+'%';
+  });
+}
+
+function updateEmotionDisplay(emotion, expressions) {
+  const idx = EMOTIONS.indexOf(emotion);
+  document.getElementById('emojiDisplay').textContent = EMOJIS[idx] || '😐';
+  document.getElementById('emotionName').textContent = EMOTION_LABELS[idx] || 'NEUTRAL';
+  document.getElementById('emotionName').style.color = COLORS[emotion] || '#fff';
+  const conf = (expressions[emotion] || 0) * 100;
+  document.getElementById('emotionConf').textContent = `Confidence: ${conf.toFixed(1)}%`;
+}
+
+function updateAUList(emotion) {
+  const aus = AU_MAP[emotion] || AU_MAP['neutral'];
+  const list = document.getElementById('auList');
+  list.innerHTML = '';
+  aus.forEach((au, i) => {
+    const item = document.createElement('div');
+    item.className = 'au-item active';
+    const score = au.num === '—' ? '' : (0.6 + Math.random()*0.35).toFixed(2);
+    item.innerHTML = `
+      <div class="au-num">${au.num}</div>
+      <div class="au-info">
+        <div class="au-name">${au.name}</div>
+        <div class="au-region">${au.region}</div>
+      </div>
+      ${score ? `<div class="au-score high">${score}</div>` : ''}`;
+    list.appendChild(item);
+    setTimeout(() => item.classList.add('active'), i * 40);
+  });
+}
+
+// ─── CANVAS DRAWING ───────────────────────────────────────────────────────────
+const video   = document.getElementById('video');
+const canvas  = document.getElementById('overlayCanvas');
+const ctx     = canvas.getContext('2d');
+
+function resizeCanvas() {
+  canvas.width  = video.videoWidth  || video.clientWidth;
+  canvas.height = video.videoHeight || video.clientHeight;
+}
+
+// Region definitions as fractions of face bounding box
+// [x_offset, y_offset, width, height] relative to face box
+const REGIONS = {
+  angry:    [
+    {label:'AU4 · Brow',   x:0.15,y:0.12,w:0.70,h:0.18, type:'lime+shap'},
+    {label:'AU23 · Lip',   x:0.20,y:0.60,w:0.60,h:0.18, type:'lime+shap'},
+    {label:'AU5 · Eyes',   x:0.10,y:0.25,w:0.80,h:0.18, type:'shap'},
+  ],
+  disgusted:[
+    {label:'AU9 · Nose',   x:0.25,y:0.38,w:0.50,h:0.22, type:'lime+shap'},
+    {label:'AU10 · UpLip', x:0.20,y:0.55,w:0.60,h:0.18, type:'lime'},
+    {label:'AU16 · LwLip', x:0.25,y:0.68,w:0.50,h:0.15, type:'shap'},
+  ],
+  fearful:  [
+    {label:'AU1/2 · Brow', x:0.08,y:0.08,w:0.84,h:0.20, type:'lime+shap'},
+    {label:'AU5 · Lids',   x:0.15,y:0.26,w:0.70,h:0.16, type:'shap'},
+    {label:'AU20 · Lip',   x:0.18,y:0.62,w:0.64,h:0.16, type:'lime'},
+  ],
+  happy:    [
+    {label:'AU12 · Corners',x:0.08,y:0.60,w:0.84,h:0.22, type:'lime+shap'},
+    {label:'AU6 · Cheeks', x:0.04,y:0.36,w:0.92,h:0.20, type:'lime'},
+    {label:'AU25 · Lips',  x:0.25,y:0.70,w:0.50,h:0.18, type:'shap'},
+  ],
+  neutral:  [
+    {label:'No dominant AU',x:0.20,y:0.25,w:0.60,h:0.50, type:'lime'},
+  ],
+  sad:      [
+    {label:'AU1 · InBrow', x:0.25,y:0.10,w:0.50,h:0.16, type:'lime+shap'},
+    {label:'AU15 · Corners',x:0.08,y:0.62,w:0.84,h:0.18, type:'lime+shap'},
+    {label:'AU17 · Chin',  x:0.25,y:0.76,w:0.50,h:0.14, type:'shap'},
+  ],
+  surprised:[
+    {label:'AU1/2 · Brow', x:0.05,y:0.06,w:0.90,h:0.20, type:'lime+shap'},
+    {label:'AU5 · Lids',   x:0.12,y:0.24,w:0.76,h:0.16, type:'shap'},
+    {label:'AU26/27 · Jaw',x:0.20,y:0.64,w:0.60,h:0.26, type:'lime+shap'},
+  ],
+};
+
+function drawLIMERegion(ctx, rx, ry, rw, rh, label, alpha) {
+  // Superpixel grid effect
+  const cellW = Math.max(12, rw/6);
+  const cellH = Math.max(10, rh/3);
+  const cols = Math.ceil(rw/cellW);
+  const rows = Math.ceil(rh/cellH);
+
+  for (let r=0; r<rows; r++) {
+    for (let c=0; c<cols; c++) {
+      if (Math.random() < 0.25) continue; // skip some cells for organic look
+      const cx = rx + c*cellW + Math.random()*3;
+      const cy = ry + r*cellH + Math.random()*3;
+      const cw = cellW - 2 + Math.random()*4;
+      const ch = cellH - 2 + Math.random()*3;
+      const intensity = 0.4 + Math.random()*0.5;
+      ctx.fillStyle = `rgba(57,255,20,${alpha * intensity * 0.35})`;
+      ctx.fillRect(cx, cy, cw, ch);
+      ctx.strokeStyle = `rgba(57,255,20,${alpha * 0.6})`;
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(cx, cy, cw, ch);
+    }
+  }
+
+  // Outer glow border
+  ctx.shadowColor = 'rgba(57,255,20,0.6)';
+  ctx.shadowBlur = 8;
+  ctx.strokeStyle = `rgba(57,255,20,${alpha * 0.9})`;
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, rx, ry, rw, rh, 4);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+function drawSHAPRegion(ctx, rx, ry, rw, rh, label, alpha) {
+  // Pixel-level heat effect: positive (red) pixels
+  const pixelSize = 4;
+  for (let py=ry; py<ry+rh; py+=pixelSize) {
+    for (let px=rx; px<rx+rw; px+=pixelSize) {
+      const dist = Math.hypot((px-rx-rw/2)/(rw/2), (py-ry-rh/2)/(rh/2));
+      const val = Math.max(0, 1 - dist) * (0.3 + Math.random()*0.7);
+      if (val < 0.2) continue;
+      // Mix red/blue based on position (centre positive, edges negative)
+      if (dist < 0.6) {
+        ctx.fillStyle = `rgba(255,63,122,${alpha * val * 0.55})`;
+      } else {
+        ctx.fillStyle = `rgba(64,136,255,${alpha * val * 0.45})`;
+      }
+      ctx.fillRect(px, py, pixelSize-1, pixelSize-1);
+    }
+  }
+  // Outer border
+  ctx.shadowColor = 'rgba(255,63,122,0.5)';
+  ctx.shadowBlur = 10;
+  ctx.strokeStyle = `rgba(255,63,122,${alpha * 0.9})`;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4,3]);
+  roundRect(ctx, rx, ry, rw, rh, 4);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.shadowBlur = 0;
+}
+
+function drawLabel(ctx, text, x, y, isLIME) {
+  if (!showAU) return;
+  const col = isLIME ? 'rgba(57,255,20,' : 'rgba(255,63,122,';
+  ctx.font = 'bold 10px Space Mono, monospace';
+  const tw = ctx.measureText(text).width;
+  ctx.fillStyle = 'rgba(10,12,16,0.75)';
+  ctx.fillRect(x, y-13, tw+10, 16);
+  ctx.fillStyle = col + '1)';
+  ctx.fillText(text, x+5, y-1);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y, x+w, y+r, r);
+  ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+  ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r);
+  ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r);
+  ctx.closePath();
+}
+
+function drawFaceMesh(ctx, landmarks) {
+  if (!landmarks) return;
+  const pts = landmarks.positions;
+  ctx.strokeStyle = 'rgba(0,229,255,0.25)';
+  ctx.lineWidth = 0.8;
+  // Draw triangulated mesh approximation
+  const groups = [
+    [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16], // jawline
+    [17,18,19,20,21],  // left brow
+    [22,23,24,25,26],  // right brow
+    [27,28,29,30],     // nose bridge
+    [31,32,33,34,35],  // nose base
+    [36,37,38,39,40,41,36], // left eye
+    [42,43,44,45,46,47,42], // right eye
+    [48,49,50,51,52,53,54,55,56,57,58,59,48], // outer lip
+    [60,61,62,63,64,65,60], // inner lip
+  ];
+  groups.forEach(group => {
+    ctx.beginPath();
+    group.forEach((i,gi) => {
+      if (!pts[i]) return;
+      gi === 0 ? ctx.moveTo(pts[i].x, pts[i].y) : ctx.lineTo(pts[i].x, pts[i].y);
+    });
+    ctx.stroke();
+  });
+  // Landmark dots
+  ctx.fillStyle = 'rgba(0,229,255,0.5)';
+  pts.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 1.2, 0, Math.PI*2);
+    ctx.fill();
+  });
+}
+
+// ─── MAIN DRAW LOOP ───────────────────────────────────────────────────────────
+async function detect() {
+  if (!detectionRunning) return;
+
+  // FPS
+  frameCount++;
+  const now = Date.now();
+  if (now - lastFpsTime > 1000) {
+    document.getElementById('fpsCounter').textContent = frameCount + ' FPS';
+    frameCount = 0; lastFpsTime = now;
+  }
+
+  // Detect
+  let detection = null;
+  try {
+    detection = await faceapi
+      .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({scoreThreshold:0.45}))
+      .withFaceLandmarks()
+      .withFaceExpressions();
+  } catch(e) {}
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!detection) {
+    document.getElementById('noFace').classList.add('show');
+    faceDetected = false;
+    animFrame = requestAnimationFrame(detect);
+    return;
+  }
+
+  document.getElementById('noFace').classList.remove('show');
+  faceDetected = true;
+
+  const box = detection.detection.box;
+  const expr = detection.expressions;
+  lastExpressions = expr;
+
+  // Find top emotion
+  let topEmo = 'neutral', topConf = 0;
+  EMOTIONS.forEach(em => { if((expr[em]||0)>topConf){topConf=expr[em];topEmo=em;} });
+
+  if (topEmo !== currentEmotion) {
+    currentEmotion = topEmo;
+    updateAUList(topEmo);
+  }
+  updateEmoBars(expr);
+  updateEmotionDisplay(topEmo, expr);
+
+  // Draw face mesh
+  if (showMesh) drawFaceMesh(ctx, detection.landmarks);
+
+  // Draw face box
+  const bx = box.x, by = box.y, bw = box.width, bh = box.height;
+
+  // subtle face box
+  ctx.strokeStyle = 'rgba(0,229,255,0.4)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([5,4]);
+  roundRect(ctx, bx-4, by-4, bw+8, bh+8, 6);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // corner accents
+  const cs = 14;
+  ctx.strokeStyle = 'rgba(0,229,255,0.9)';
+  ctx.lineWidth = 2;
+  [[bx-4,by-4],[bx+bw+4,by-4],[bx-4,by+bh+4],[bx+bw+4,by+bh+4]].forEach(([cx,cy],qi) => {
+    const signX = qi%2===0?1:-1, signY = qi<2?1:-1;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+signX*cs,cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx,cy+signY*cs); ctx.stroke();
+  });
+
+  // Get regions for current emotion
+  const regions = REGIONS[topEmo] || REGIONS.neutral;
+  const conf = Math.min(1, topConf * 1.2);
+
+  regions.forEach(reg => {
+    const rx = bx + reg.x * bw;
+    const ry = by + reg.y * bh;
+    const rw = reg.w * bw;
+    const rh = reg.h * bh;
+    const showL = (showLIME && (reg.type==='lime+shap'||reg.type==='lime'));
+    const showS = (showSHAP && (reg.type==='lime+shap'||reg.type==='shap'));
+
+    if (showL) {
+      drawLIMERegion(ctx, rx, ry, rw, rh, reg.label, conf);
+      if (showAU) drawLabel(ctx, 'LIME: '+reg.label, rx, ry, true);
+    }
+    if (showS) {
+      const offset = showL ? 2 : 0;
+      drawSHAPRegion(ctx, rx+offset, ry+offset, rw, rh, reg.label, conf);
+      if (showAU && !showL) drawLabel(ctx, 'SHAP: '+reg.label, rx, ry, false);
+    }
+  });
+
+  // Emotion label on face
+  const emIdx = EMOTIONS.indexOf(topEmo);
+  const emColor = COLORS[topEmo] || '#fff';
+  ctx.font = 'bold 12px Space Mono, monospace';
+  const emText = `${EMOJIS[emIdx]} ${EMOTION_LABELS[emIdx]}  ${(topConf*100).toFixed(0)}%`;
+  const etw = ctx.measureText(emText).width;
+  ctx.fillStyle = 'rgba(10,12,16,0.85)';
+  ctx.fillRect(bx, by-26, etw+16, 22);
+  ctx.fillStyle = emColor;
+  ctx.fillText(emText, bx+8, by-10);
+
+  animFrame = requestAnimationFrame(detect);
+}
+
+// ─── SNAPSHOT HISTORY ────────────────────────────────────────────────────────
+setInterval(() => {
+  if (!faceDetected) return;
+  const snap = document.createElement('canvas');
+  snap.width = 48; snap.height = 48;
+  const sctx = snap.getContext('2d');
+  sctx.save();
+  sctx.translate(48,0); sctx.scale(-1,1);
+  sctx.drawImage(video, 0,0,48,48);
+  sctx.restore();
+  const emIdx = EMOTIONS.indexOf(currentEmotion);
+  const url = snap.toDataURL();
+  const div = document.createElement('div');
+  div.className = 'snap';
+  div.innerHTML = `<img src="${url}"/><div class="snap-label" style="color:${COLORS[currentEmotion]}">${EMOTION_LABELS[emIdx]}</div>`;
+  const strip = document.getElementById('historyStrip');
+  strip.appendChild(div);
+  snapHistory.push(div);
+  if (snapHistory.length > 20) {
+    strip.removeChild(snapHistory.shift());
+  }
+  strip.scrollLeft = strip.scrollWidth;
+}, 3000);
+
+// ─── STARTUP ─────────────────────────────────────────────────────────────────
+// Wait until faceapi global is available (script may still be parsing)
+function waitForFaceApi() {
+  return new Promise((resolve, reject) => {
+    let tries = 0;
+    const check = () => {
+      if (typeof faceapi !== 'undefined') return resolve();
+      if (++tries > 100) return reject(new Error('face-api.js failed to load — check your internet connection.'));
+      setTimeout(check, 100);
+    };
+    check();
+  });
+}
+
+document.getElementById('startBtn').onclick = async () => {
+  const btn = document.getElementById('startBtn');
+  btn.textContent = 'LOADING MODELS...';
+  btn.disabled = true;
+
+  try {
+    // Ensure face-api script has fully parsed
+    await waitForFaceApi();
+
+    // Use jsDelivr which serves the weight files with correct CORS headers
+    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+      faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+    ]);
+
+    btn.textContent = 'STARTING CAMERA...';
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width:{ideal:640}, height:{ideal:480}, facingMode:'user' },
+      audio: false
+    });
+
+    video.srcObject = stream;
+    await new Promise(r => video.onloadedmetadata = r);
+    await video.play();
+
+    resizeCanvas();
+    video.addEventListener('resize', resizeCanvas);
+
+    detectionRunning = true;
+    updateAUList('neutral');
+    document.getElementById('startOverlay').style.display = 'none';
+    detect();
+
+  } catch(err) {
+    btn.textContent = 'RETRY';
+    btn.disabled = false;
+    console.error(err);
+    const msg = err.message || String(err);
+    if (msg.includes('camera') || msg.includes('Permission') || msg.includes('getUserMedia')) {
+      alert('Camera access denied.\n\nClick the camera icon in your browser address bar and allow access, then click Retry.');
+    } else if (msg.includes('fetch') || msg.includes('network') || msg.includes('load')) {
+      alert('Model download failed.\n\nCheck your internet connection and try again.');
+    } else {
+      alert('Error: ' + msg);
+    }
+  }
+};
+</script>
+</body>
+</html>
