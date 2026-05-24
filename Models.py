@@ -44,7 +44,7 @@ def build_resnet50(pretrained: bool = True) -> FERModel:
     return model
 
 
-def build_efficientnet_b0(pretrained: bool = True) -> FERModel:
+def build_efficientnet_b0(pretrained: bool =     True) -> FERModel:
     backbone    = models.efficientnet_b0(
         weights=models.EfficientNet_B0_Weights.IMAGENET1K_V1 if pretrained else None
     )
