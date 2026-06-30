@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FER XAI — Live (Real Model)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg:#0a0c10; --surface:#111318; --card:#161a22; --border:#1f2530;
+  --accent:#00e5ff; --lime-col:#39ff14; --shap-col:#ff3f7a;
+  --text:#e8ecf0; --muted:#5a6275;
+  --angry:#ff4444; --disgust:#aa44ff; --fear:#ff8800; --happy:#ffdd00;
+  --neutral:#88aacc; --sad:#4488ff; --surprise:#ff44cc;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
+
+header{
+  position:fixed;top:0;left:0;right:0;z-index:100;height:52px;
+  background:rgba(10,12,16,0.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;padding:0 20px;
+}
+.logo{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);letter-spacing:0.05em;}
+.logo span{color:var(--muted);}
+.header-right{display:flex;gap:10px;align-items:center;}
+select{
+  background:var(--card);color:var(--text);border:1px solid var(--border);
+  border-radius:4px;padding:5px 10px;font-family:'Space Mono',monospace;font-size:11px;
+}
+.badge{font-family:'Space Mono',monospace;font-size:10px;padding:3px 8px;border-radius:3px;letter-spacing:0.06em;font-weight:700;}
+.badge-live{background:rgba(0,229,255,0.12);color:var(--accent);border:1px solid rgba(0,229,255,0.3);}
+.badge-live.connected{animation:pulse-badge 2s infinite;}
+.badge-down{background:rgba(255,68,68,0.12);color:#ff4444;border:1px solid rgba(255,68,68,0.3);}
+@keyframes pulse-badge{0%,100%{opacity:1;}50%{opacity:0.5;}}
+
+.layout{
+  position:fixed;top:52px;left:0;right:0;bottom:0;
+  display:grid;grid-template-columns:1fr 360px;grid-template-rows:1fr 130px;
+  gap:1px;background:var(--border);
+}
+
+.panel-video{grid-row:1;grid-column:1;background:var(--surface);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+#videoWrap{position:relative;display:inline-block;}
+#video{display:block;transform:scaleX(-1);}
+#overlayCanvas{position:absolute;top:0;left:0;transform:scaleX(-1);pointer-events:none;}
+.panel-label{position:absolute;top:14px;left:14px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:0.1em;background:rgba(10,12,16,0.7);padding:4px 8px;border-radius:3px;border:1px solid var(--border);}
+.latency-counter{position:absolute;top:14px;right:14px;font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);background:rgba(10,12,16,0.7);padding:4px 8px;border-radius:3px;border:1px solid rgba(0,229,255,0.2);}
+
+.panel-right{grid-row:1/3;grid-column:2;background:var(--card);display:flex;flex-direction:column;overflow-y:auto;}
+.panel-section{padding:14px 16px;border-bottom:1px solid var(--border);}
+.section-title{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.12em;margin-bottom:10px;}
+
+.emotion-primary{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.emotion-icon{font-size:32px;line-height:1;}
+.emotion-name{font-family:'Space Mono',monospace;font-size:20px;font-weight:700;color:var(--text);letter-spacing:0.03em;}
+.emotion-conf{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);}
+
+.emo-bars{display:flex;flex-direction:column;gap:5px;}
+.emo-row{display:flex;align-items:center;gap:8px;}
+.emo-lbl{font-family:'Space Mono',monospace;font-size:9px;width:52px;color:var(--muted);letter-spacing:0.05em;}
+.emo-bar-track{flex:1;height:5px;border-radius:2px;background:rgba(255,255,255,0.05);overflow:hidden;}
+.emo-bar-fill{height:100%;border-radius:2px;transition:width 0.2s ease;}
+.emo-pct{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);width:30px;text-align:right;}
+
+.xai-images{display:flex;flex-direction:column;gap:10px;}
+.xai-card{border-radius:8px;overflow:hidden;border:1px solid var(--border);}
+.xai-card-header{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(255,255,255,0.03);}
+.xai-card-title{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;}
+.xai-card-title.lime{color:var(--lime-col);}
+.xai-card-title.shap{color:var(--shap-col);}
+.xai-card-latency{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);}
+.xai-card img{width:100%;display:block;background:#000;min-height:140px;object-fit:cover;}
+.xai-placeholder{
+  width:100%;height:140px;display:flex;align-items:center;justify-content:center;
+  font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);
+  background:repeating-linear-gradient(45deg,#0e1014,#0e1014 10px,#121419 10px,#121419 20px);
+}
+.spinner{
+  width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);
+  border-radius:50%;animation:spin 0.8s linear infinite;margin-right:8px;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.explain-btn{
+  width:100%;padding:12px;border-radius:6px;border:none;cursor:pointer;
+  background:var(--accent);color:var(--bg);font-family:'Space Mono',monospace;
+  font-size:12px;font-weight:700;letter-spacing:0.05em;
+  transition:opacity 0.15s;
+}
+.explain-btn:hover{opacity:0.85;}
+.explain-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.explain-btn.auto-on{background:var(--lime-col);}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.toggle-label{font-size:12px;color:var(--text);}
+.toggle{position:relative;width:36px;height:20px;cursor:pointer;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;inset:0;border-radius:10px;background:var(--border);transition:0.2s;}
+.toggle-slider::before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;border-radius:50%;background:var(--muted);transition:0.2s;}
+.toggle input:checked + .toggle-slider{background:rgba(0,229,255,0.3);}
+.toggle input:checked + .toggle-slider::before{transform:translateX(16px);background:var(--accent);}
+
+.panel-bottom{grid-row:2;grid-column:1;background:var(--card);display:flex;align-items:center;padding:0 16px;gap:20px;}
+.model-info{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);line-height:1.8;}
+.model-info b{color:var(--accent);}
+.status-line{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);}
+
+#startOverlay{
+  position:fixed;inset:0;z-index:200;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+}
+.start-title{font-family:'Space Mono',monospace;font-size:24px;font-weight:700;color:var(--text);letter-spacing:0.04em;text-align:center;}
+.start-title span{color:var(--accent);}
+.start-sub{font-size:14px;color:var(--muted);text-align:center;max-width:460px;line-height:1.6;}
+.start-btn{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;letter-spacing:0.08em;padding:14px 32px;border-radius:6px;background:var(--accent);color:var(--bg);border:none;cursor:pointer;}
+.start-btn:disabled{opacity:0.5;}
+.start-credits{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);text-align:center;letter-spacing:0.05em;line-height:1.8;}
+.backend-status{font-family:'Space Mono',monospace;font-size:11px;padding:6px 12px;border-radius:4px;}
+.backend-status.ok{background:rgba(57,255,20,0.1);color:var(--lime-col);border:1px solid rgba(57,255,20,0.3);}
+.backend-status.fail{background:rgba(255,68,68,0.1);color:#ff4444;border:1px solid rgba(255,68,68,0.3);}
+
+#noFace{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Space Mono',monospace;font-size:13px;color:var(--muted);text-align:center;pointer-events:none;}
+#noFace.show{display:block;}
+</style>
+</head>
+<body>
+
+<div id="startOverlay">
+  <div class="start-title">FER <span>XAI</span> Live — Real Model</div>
+  <div class="start-sub">
+    Connects to your local Flask backend running your actual<br>
+    trained ResNet-50 / EfficientNet-B0 weights with real<br>
+    <b style="color:var(--lime-col)">LIME</b> &amp; <b style="color:var(--shap-col)">SHAP</b> explanations.
+  </div>
+  <div class="backend-status" id="backendStatus">Checking backend connection...</div>
+  <button class="start-btn" id="startBtn" disabled>START CAMERA</button>
+  <div class="start-credits">
+    Karamjodh Singh · Aadarsh Ahlawat<br>
+    Supervised by Ms. Richa Tiwari · Chandigarh University<br>
+    Major Project — 23CST-399 · CS221
+  </div>
+</div>
+
+<header>
+  <div class="logo">FER<span>/</span>XAI<span> ·</span> LIVE (REAL MODEL)</div>
+  <div class="header-right">
+    <select id="modelSelect">
+      <option value="resnet50_rafdb">ResNet-50 (RAF-DB) — 84.36%</option>
+      <option value="efficientnet_b0_fer2013">EfficientNet-B0 (FER2013) — 71.08%</option>
+    </select>
+    <span class="badge badge-live" id="connBadge">● CONNECTING</span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <div class="panel-video">
+    <div id="videoWrap">
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="overlayCanvas"></canvas>
+      <div id="noFace">No face detected<br><span style="font-size:10px;opacity:0.5;">Move closer to the camera</span></div>
+    </div>
+    <div class="panel-label">WEBCAM FEED → YOUR TRAINED MODEL</div>
+    <div class="latency-counter" id="latencyCounter">— ms</div>
+  </div>
+
+  <div class="panel-right">
+
+    <div class="panel-section">
+      <div class="section-title">DETECTED EMOTION (LIVE INFERENCE)</div>
+      <div class="emotion-primary">
+        <div class="emotion-icon" id="emojiDisplay">😐</div>
+        <div>
+          <div class="emotion-name" id="emotionName">—</div>
+          <div class="emotion-conf" id="emotionConf">Waiting for prediction...</div>
+        </div>
+      </div>
+      <div class="emo-bars" id="emoBars"></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">XAI EXPLANATION (REAL MODEL OUTPUT)</div>
+      <div class="toggle-row">
+        <span class="toggle-label">Auto-explain every 4s</span>
+        <label class="toggle"><input type="checkbox" id="toggleAuto"><span class="toggle-slider"></span></label>
+      </div>
+      <button class="explain-btn" id="explainBtn">RUN LIME + SHAP NOW</button>
+      <div style="height:10px;"></div>
+      <div class="xai-images">
+        <div class="xai-card">
+          <div class="xai-card-header">
+            <span class="xai-card-title lime">LIME (real superpixels)</span>
+            <span class="xai-card-latency" id="limeLatency"></span>
+          </div>
+          <div id="limeContainer"><div class="xai-placeholder">Press button to compute</div></div>
+        </div>
+        <div class="xai-card">
+          <div class="xai-card-header">
+            <span class="xai-card-title shap">SHAP (real Shapley values)</span>
+            <span class="xai-card-latency" id="shapLatency"></span>
+          </div>
+          <div id="shapContainer"><div class="xai-placeholder">Press button to compute</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="panel-bottom">
+    <div class="model-info" id="modelInfo">
+      <b>ResNet-50</b> · RAF-DB · 84.36% accuracy · 93.55% AUC<br>
+      Backend: <span id="backendUrl">localhost:5000</span>
+    </div>
+    <div class="status-line" id="statusLine">Idle</div>
+  </div>
+
+</div>
+
+<script>
+const BACKEND = window.location.origin;
+const EMOTIONS = ["Angry","Disgust","Fear","Happy","Neutral","Sad","Surprise"];
+const EMOJIS   = ["😠","🤢","😨","😄","😐","😢","😲"];
+const COLORS = {Angry:"#ff4444",Disgust:"#aa44ff",Fear:"#ff8800",Happy:"#ffdd00",Neutral:"#88aacc",Sad:"#4488ff",Surprise:"#ff44cc"};
+const MODEL_META = {
+  resnet50_rafdb: {name:"ResNet-50", dataset:"RAF-DB", acc:"84.36%", auc:"93.55%"},
+  efficientnet_b0_fer2013: {name:"EfficientNet-B0", dataset:"FER2013", acc:"71.08%", auc:"91.13%"},
+};
+
+let currentModel = "resnet50_rafdb";
+let predictTimer = null;
+let autoExplainTimer = null;
+let isExplaining = false;
+let video, canvas, ctx, hiddenCanvas, hctx;
+
+// ── Emotion bars ──
+function buildEmoBars() {
+  const c = document.getElementById('emoBars');
+  c.innerHTML = '';
+  EMOTIONS.forEach(em => {
+    const row = document.createElement('div');
+    row.className = 'emo-row';
+    row.innerHTML = `<div class="emo-lbl">${em.slice(0,7).toUpperCase()}</div>
+      <div class="emo-bar-track"><div class="emo-bar-fill" id="bar-${em}" style="width:0%;background:${COLORS[em]}"></div></div>
+      <div class="emo-pct" id="pct-${em}">0%</div>`;
+    c.appendChild(row);
+  });
+}
+buildEmoBars();
+
+function updateEmoBars(probs) {
+  EMOTIONS.forEach(em => {
+    const v = (probs[em]||0)*100;
+    document.getElementById('bar-'+em).style.width = v.toFixed(1)+'%';
+    document.getElementById('pct-'+em).textContent = v.toFixed(0)+'%';
+  });
+}
+
+function updateEmotionDisplay(emotion, probs) {
+  const idx = EMOTIONS.indexOf(emotion);
+  document.getElementById('emojiDisplay').textContent = EMOJIS[idx] || '😐';
+  document.getElementById('emotionName').textContent = emotion.toUpperCase();
+  document.getElementById('emotionName').style.color = COLORS[emotion] || '#fff';
+  const conf = (probs[emotion]||0)*100;
+  document.getElementById('emotionConf').textContent = `Confidence: ${conf.toFixed(1)}% (real model output)`;
+}
+
+// ── Capture current video frame as base64 JPEG ──
+function captureFrame(targetSize=224) {
+  hctx.save();
+  hctx.translate(targetSize, 0);
+  hctx.scale(-1, 1);
+  hctx.drawImage(video, 0, 0, targetSize, targetSize);
+  hctx.restore();
+  return hiddenCanvas.toDataURL('image/jpeg', 0.85);
+}
+
+// ── Fast predict loop ──
+async function predictLoop() {
+  try {
+    const frame = captureFrame(224);
+    const t0 = performance.now();
+    const res = await fetch(BACKEND + '/api/predict', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ model: currentModel, image: frame })
+    });
+    const data = await res.json();
+    const rtt = (performance.now() - t0).toFixed(0);
+
+    if (data.error) {
+      document.getElementById('statusLine').textContent = 'Error: ' + data.error;
+    } else {
+      document.getElementById('noFace').classList.remove('show');
+      updateEmotionDisplay(data.emotion, data.probabilities);
+      updateEmoBars(data.probabilities);
+      document.getElementById('latencyCounter').textContent =
+        `${data.latency_ms}ms inference / ${rtt}ms RTT`;
+      document.getElementById('statusLine').textContent =
+        `Live · ${data.emotion} · ${(data.probabilities[data.emotion]*100).toFixed(1)}%`;
+    }
+  } catch(e) {
+    document.getElementById('connBadge').textContent = '● BACKEND DOWN';
+    document.getElementById('connBadge').className = 'badge badge-down';
+  }
+}
+
+// ── Slow explain (real LIME + SHAP) ──
+async function runExplain() {
+  if (isExplaining) return;
+  isExplaining = true;
+  document.getElementById('explainBtn').disabled = true;
+  document.getElementById('explainBtn').textContent = 'COMPUTING (this takes a few seconds)...';
+  document.getElementById('limeContainer').innerHTML = '<div class="xai-placeholder"><span class="spinner"></span>Running real LIME...</div>';
+  document.getElementById('shapContainer').innerHTML = '<div class="xai-placeholder"><span class="spinner"></span>Running real SHAP...</div>';
+
+  try {
+    const frame = captureFrame(224);
+    const res = await fetch(BACKEND + '/api/explain', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ model: currentModel, image: frame, methods:['lime','shap'] })
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      document.getElementById('limeContainer').innerHTML = `<div class="xai-placeholder">Error: ${data.error}</div>`;
+      document.getElementById('shapContainer').innerHTML = `<div class="xai-placeholder">Error: ${data.error}</div>`;
+    } else {
+      if (data.lime_image) {
+        document.getElementById('limeContainer').innerHTML = `<img src="${data.lime_image}"/>`;
+        document.getElementById('limeLatency').textContent = data.lime_latency_ms + 'ms';
+      }
+      if (data.shap_image) {
+        document.getElementById('shapContainer').innerHTML = `<img src="${data.shap_image}"/>`;
+        document.getElementById('shapLatency').textContent = data.shap_latency_ms + 'ms';
+      }
+      updateEmotionDisplay(data.emotion, data.probabilities);
+      updateEmoBars(data.probabilities);
+    }
+  } catch(e) {
+    document.getElementById('limeContainer').innerHTML = `<div class="xai-placeholder">Backend unreachable</div>`;
+    document.getElementById('shapContainer').innerHTML = `<div class="xai-placeholder">Backend unreachable</div>`;
+  }
+
+  isExplaining = false;
+  document.getElementById('explainBtn').disabled = false;
+  document.getElementById('explainBtn').textContent = 'RUN LIME + SHAP NOW';
+}
+
+document.getElementById('explainBtn').onclick = runExplain;
+
+document.getElementById('toggleAuto').onchange = (e) => {
+  const btn = document.getElementById('explainBtn');
+  if (e.target.checked) {
+    btn.classList.add('auto-on');
+    autoExplainTimer = setInterval(runExplain, 4000);
+  } else {
+    btn.classList.remove('auto-on');
+    clearInterval(autoExplainTimer);
+  }
+};
+
+document.getElementById('modelSelect').onchange = (e) => {
+  currentModel = e.target.value;
+  const meta = MODEL_META[currentModel];
+  document.getElementById('modelInfo').innerHTML =
+    `<b>${meta.name}</b> · ${meta.dataset} · ${meta.acc} accuracy · ${meta.auc} AUC<br>
+     Backend: <span id="backendUrl">localhost:5000</span>`;
+};
+
+// ── Backend health check ──
+async function checkBackend() {
+  try {
+    const res = await fetch(BACKEND + '/api/models');
+    if (res.ok) {
+      document.getElementById('backendStatus').textContent = '✓ Backend connected — models loaded';
+      document.getElementById('backendStatus').className = 'backend-status ok';
+      document.getElementById('startBtn').disabled = false;
+      return true;
+    }
+  } catch(e) {}
+  document.getElementById('backendStatus').textContent =
+    '✗ Cannot reach backend at localhost:5000 — run "python app.py" first';
+  document.getElementById('backendStatus').className = 'backend-status fail';
+  return false;
+}
+
+checkBackend();
+setInterval(checkBackend, 5000);
+
+// ── Startup ──
+document.getElementById('startBtn').onclick = async () => {
+  const btn = document.getElementById('startBtn');
+  btn.textContent = 'STARTING CAMERA...';
+  btn.disabled = true;
+
+  try {
+    video = document.getElementById('video');
+    canvas = document.getElementById('overlayCanvas');
+    ctx = canvas.getContext('2d');
+    hiddenCanvas = document.createElement('canvas');
+    hiddenCanvas.width = 224; hiddenCanvas.height = 224;
+    hctx = hiddenCanvas.getContext('2d');
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width:{ideal:640}, height:{ideal:480}, facingMode:'user' },
+      audio: false
+    });
+    video.srcObject = stream;
+    await new Promise(r => video.onloadedmetadata = r);
+    await video.play();
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    document.getElementById('startOverlay').style.display = 'none';
+    document.getElementById('connBadge').textContent = '● LIVE';
+    document.getElementById('connBadge').classList.add('connected');
+
+    predictTimer = setInterval(predictLoop, 600); // ~1.6 predictions/sec, gentle on CPU/GPU
+
+  } catch(err) {
+    btn.textContent = 'RETRY';
+    btn.disabled = false;
+    alert('Camera error: ' + err.message);
+  }
+};
+</script>
+</body>
+</html>

@@ -35,3 +35,5 @@ kaggle>=1.6.0
 shap
 
 opencv-python
+
+flask>=2.3
