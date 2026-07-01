@@ -32,6 +32,8 @@ import shap
 # ──────────────────────────────────────────────────────────────────────────
 CHECKPOINTS = {
     "resnet50_rafdb": "outputs/checkpoints/resnet50_rafdb_best.pth",
+    "resnet50_fer2013" : "outputs/checkpoints/resnet50_fer2013_best.pth",
+    "efficientnet_b0_rafdb": "outputs/checkpoints/efficientnet_b0_rafdb_best.pth",
     "efficientnet_b0_fer2013": "outputs/checkpoints/efficientnet_b0_fer2013_best.pth",
 }
 EMOTIONS = ["Angry", "Disgust", "Fear", "Happy", "Neutral", "Sad", "Surprise"]
